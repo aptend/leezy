@@ -1,0 +1,271 @@
+import re
+import sys
+import json
+import logging
+from pathlib import Path
+
+import requests
+
+logger = logging.getLogger()
+
+
+class ProblemEntryRepo:
+    def __init__(self):
+        self.all_problem_url = "https://leetcode-cn.com/api/problems/algorithms/"
+        self.logger = logger
+        self.problems_file = "all_problems.json"
+        self.problems = None
+
+    def names_by_id(self, id_):
+        if self.problems is None:
+            self.problems = self.all_problems()
+        none_item = {
+            "question__title": "",
+            "question__title_slug": ""
+        }
+        return self.problems.get(id_, none_item)
+
+    def title_by_id(self, id_):
+        return self.names_by_id(str(id_))['question__title']
+
+    def slug_title_by_id(self, id_):
+        return self.names_by_id(str(id_))['question__title_slug']
+
+    def all_problems(self):
+        problems = self.local_all_problems()
+        if not problems:
+            self.update()
+            problems = self.local_all_problems()
+        return problems
+
+    def local_all_problems(self):
+        try:
+            f = open(self.problems_file, encoding='utf8')
+        except FileNotFoundError:
+            self.logger.info(
+                f'{self.problems_file} is not existed. updating expected')
+            return {}
+        problems = json.load(f)
+        f.close()
+        return problems
+
+    def update(self):
+        problems = self.web_all_problems()
+        if problems:
+            self.write_down_problems(problems)
+        else:
+            self.logger.warning("fetched 0 problem. updating aborted")
+
+    def web_all_problems(self):
+        raw = self.raw_web_all_problems()
+        return self.flush_raw_all_problems(raw)
+
+    def raw_web_all_problems(self):
+        try:
+            r = requests.get(self.all_problem_url)
+        except requests.ConnectionError as err:
+            self.logger.warning("fetch all problems error: %r", err)
+            return {}
+        if r.status_code != 200:
+            self.logger.warning(
+                "fetch all problems bad status code: %d", r.status_code)
+        return r.json()
+
+    def flush_raw_all_problems(self, raw_json):
+        if not raw_json:
+            return {}
+        problems = raw_json['stat_status_pairs']
+        maps = {}
+        for p in problems:
+            maps[p['stat']['frontend_question_id']] = {
+                "question__title": p['stat']['question__title'],
+                "question__title_slug": p['stat']['question__title_slug']
+            }
+        return maps
+
+    def write_down_problems(self, problems):
+        with open(self.problems_file, 'w') as f:
+            json.dump(problems, f)
+
+
+class ProblemProvider:
+    def __init__(self):
+        self.grapql_url = "https://leetcode-cn.com/graphql"
+        self.logger = logger
+        self.entry_repo = ProblemEntryRepo()
+
+    def query_payload(self, slug_title):
+        query = {
+            "operationName": "questionData",
+            "query": "query questionData($titleSlug: String!) {\n  question(titleSlug: $titleSlug) {\n     questionFrontendId\n   title\n   titleSlug\n    content\n    isPaidOnly\n    similarQuestions\n   codeSnippets {\n   langSlug\n    code\n  }\n    sampleTestCase\n   }\n}\n"
+        }
+        query['variables'] = {'titleSlug': slug_title}
+        return query
+
+    def detail_by_id(self, id_):
+        slug_title = self.entry_repo.slug_title_by_id(id_)
+        raw = self.raw_problem_detail(slug_title)
+        detail = self.flush_raw_problem_detail(slug_title, raw)
+        return detail
+
+    def raw_problem_detail(self, slug_title):
+        payload = self.query_payload(slug_title)
+        try:
+            r = requests.post(self.grapql_url, json=payload)
+        except requests.ConnectionError as err:
+            self.logger.warning(
+                "fetch problem %r detail error: %r", slug_title, err)
+            return {}
+        if r.status_code != 200:
+            self.logger.warning(
+                "fetch problem %r bad status code: %d", slug_title, r.status_code)
+        return r.json()
+
+    def flush_raw_problem_detail(self, slug_title, raw_json):
+        if not raw_json:
+            return raw_json
+        if 'errors' in raw_json:
+            self.logger.warning("%r: %s",
+                                slug_title, raw_json['errors'][0]['message'])
+            return {}
+        raw = raw_json['data']['question']
+        if raw['isPaidOnly']:
+            self.logger.warning('%r: locked', slug_title)
+            return {}
+        new = {}
+        new['frontend_id'] = raw['questionFrontendId']
+        new['title'] = raw['title']
+        new['slug_title'] = raw['titleSlug']
+        new['content'] = raw['content']
+        new['smilar_problems'] = json.loads(raw['similarQuestions'])
+        new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
+                               sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
+        new['sample_testcase'] = [str(json.loads(s)) for s
+                                  in raw['sampleTestCase'].split('\n')]
+        return new
+
+
+class Problem:
+    def __init__(self, id_, provider=None):
+        self.id_ = id_
+        self.provider = provider or ProblemProvider()
+        self.frontend_id = None
+        self.title = None
+        self.slug_title = None
+        self.content = None
+        self.smilar_problem = None
+        self.code_snippet = None
+        self.sample_testcase = None
+
+    def lazy_init(self):
+        detail = self.provider.detail_by_id(self.id_)
+        if detail:
+            self.__dict__.update(detail)
+            return True
+        return False
+
+    def __str__(self):
+        return f'Problem<{self.id_}: {self.title}>'
+
+    def generate_solution_tmpl(self):
+        re_def = re.compile(r'^\s*(def .*:)\n', re.MULTILINE)
+        re_class = re.compile(r'^\s*class ([_\w\d]+)\(?.*\)?:\n', re.MULTILINE)
+        clss = re_class.findall(self.code_snippet)
+        defs = re_def.findall(self.code_snippet)
+
+        code = CodeBuilder()
+        if len(defs) == 1:
+            code.add_line('from leeyzer import Solution, solution')
+            code.add_line('\n')
+            code.add_line(f'class Q{self.id_}(Solution):')
+            code.indent()
+            code.add_line('@solution')
+            code.add_line(defs[0])
+            code.indent()
+            code.add_line('pass')
+            code.dedent()
+            code.dedent()
+            code.add_line('\n')
+            code.add_line('def main():')
+            code.indent()
+            code.add_line(f'q = Q{self.id_}()')
+            code.add_line(f'q.add_args({", ".join(self.sample_testcase)})')
+            code.add_line('q.test()')
+            code.dedent()
+            code.add_line('\n')
+            code.add_line('if __name__ == "__main__":')
+            code.add_line('    main()')
+        elif len(clss) == 1 and clss[0] != 'Solution' and len(self.sample_testcase) == 2:
+            code.add_line(self.code_snippet)
+            inst = clss[0].lower()
+            code.add_line('def main():')
+            code.indent()
+            code.add_line(f'{inst} = {clss[0]}()')
+            code.add_line(f'operations = {self.sample_testcase[0]}')
+            code.add_line(f'operands = {self.sample_testcase[1]}')
+            code.add_line('for opt, opd in zip(operations, operands):')
+            code.add_line(f'    getattr({inst}, opt).__call__(*opd)')
+            code.dedent()
+            code.add_line('\n')
+            code.add_line('if __name__ == "__main__":')
+            code.add_line('    main()')
+        else:
+            code.add_line(
+                '# unrecoginzed solution pattern, leave it on your own\n')
+            code.add_line(self.code_snippet)
+            code.add_line('def main():\n    pass\n')
+            code.add_line('if __name__ == "__main__":\n    main()')
+
+        return str(code).replace('(object):', ':')
+
+    def show(self):
+        if self.frontend_id or self.lazy_init():
+            return str(self)
+        else:
+            return 'not found'
+
+    def pull(self):
+        p_dir = Path(f'Q{self.id_}')
+        p_dir.mkdir(exist_ok=True)
+        if self.frontend_id or self.lazy_init():
+            content = p_dir / f'{self.id_}.html'
+            content.write_text(self.content, encoding='utf8')
+            solution = p_dir / f'{self.id_}_{self.slug_title}.py'
+            solution.write_text(self.generate_solution_tmpl(), encoding='utf8')
+        else:
+            note = p_dir / f'caution.txt'
+            note.write_text(
+                'fetch problem failed: \n'
+                '1. check network; or\n'
+                '2. this problem is locked; or\n'
+                '3. this problem does not exist')
+
+
+class CodeBuilder:
+    STEP = 4
+
+    def __init__(self, level=0):
+        self.code = []
+        self.level = level
+
+    def indent(self):
+        self.level += 1
+
+    def dedent(self):
+        self.level -= 1
+
+    def add_line(self, code_line):
+        self.code.extend([' ' * self.STEP * self.level, code_line, '\n'])
+
+    def add_section(self):
+        section = CodeBuilder(self.level)
+        self.code.append(section)
+        return section
+
+    def __str__(self):
+        return ''.join([str(c) for c in self.code])
+
+
+if __name__ == "__main__":
+    p = Problem(sys.argv[1])
+    p.show()
