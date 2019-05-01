@@ -2,10 +2,12 @@ import re
 import sys
 import json
 import logging
+import tempfile
 from pathlib import Path
 
 import requests
 
+ID_WIDTH = 3
 logger = logging.getLogger()
 
 
@@ -13,8 +15,9 @@ class ProblemEntryRepo:
     def __init__(self):
         self.all_problem_url = "https://leetcode-cn.com/api/problems/algorithms/"
         self.logger = logger
-        self.problems_file = "all_problems.json"
         self.problems = None
+        path = str(Path(tempfile.gettempdir()) / "leeyzer_problems.json")
+        self.problems_file = path
 
     def names_by_id(self, id_):
         if self.problems is None:
@@ -140,14 +143,15 @@ class ProblemProvider:
         new['smilar_problems'] = json.loads(raw['similarQuestions'])
         new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
                                sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
-        new['sample_testcase'] = [str(json.loads(s)) for s
+        new['sample_testcase'] = [repr(json.loads(s)) for s
                                   in raw['sampleTestCase'].split('\n')]
         return new
 
 
 class Problem:
     def __init__(self, id_, provider=None):
-        self.id_ = id_
+        self.query_id = id_
+        self.id_ = str(id_).rjust(ID_WIDTH, '0')
         self.provider = provider or ProblemProvider()
         self.frontend_id = None
         self.title = None
@@ -158,7 +162,7 @@ class Problem:
         self.sample_testcase = None
 
     def lazy_init(self):
-        detail = self.provider.detail_by_id(self.id_)
+        detail = self.provider.detail_by_id(self.query_id)
         if detail:
             self.__dict__.update(detail)
             return True
@@ -225,7 +229,7 @@ class Problem:
             return 'not found'
 
     def pull(self):
-        p_dir = Path(f'Q{self.id_}')
+        p_dir = Path(f'{self.id_}')
         p_dir.mkdir(exist_ok=True)
         if self.frontend_id or self.lazy_init():
             content = p_dir / f'{self.id_}.html'
