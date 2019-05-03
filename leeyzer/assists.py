@@ -19,26 +19,23 @@ class ListNode:
     def __str__(self):
         return "->".join([str(v) for v in self])
 
-    def copy(self):
-        return make_linked_list(self)
-
-
-def make_linked_list(data):
-    """make linked list from list
-    
-    [1,2,3,4] => 1(head) -> 2 -> 3 -> 4
-    :param data: data source, an iterable obj  
-    :return: the head of the linked list
-    """
-    data = list(data)
-    if len(data) == 0:
-        return None
-    head = tail = ListNode(data[0])
-    for item in data[1:]:
-        node = ListNode(item)
-        tail.next = node
-        tail = node
-    return head
+    @staticmethod
+    def make_linked_list(data):
+        """make linked list from list
+        
+        [1,2,3,4] => 1(head) -> 2 -> 3 -> 4
+        :param data: data source, an iterable obj  
+        :return: the head of the linked list
+        """
+        data = list(data)
+        if len(data) == 0:
+            return None
+        head = tail = ListNode(data[0])
+        for item in data[1:]:
+            node = ListNode(item)
+            tail.next = node
+            tail = node
+        return head
 
 
 class TreeNode:
@@ -63,28 +60,31 @@ class TreeNode:
                 yield node.val
                 remaining_nodes.append(node.left)
                 remaining_nodes.append(node.right)
+    
+    @staticmethod
+    def make_tree(data):
+        """make binary tree from list
+
+        :param data: data source, an iterable obj
+        :return: the root of the binary tree.
+        """
+        if len(data) < 1:
+            return None
+        root = TreeNode(data[0])
+        queue = deque([root])
+        i = 1
+        while i < len(data):
+            try:
+                upper_node = queue.popleft()
+            except IndexError:
+                raise ValueError("bad data for binary tree")
+            for val, child in zip(data[i:i+2], ('left', 'right')):
+                if val is not None:
+                    new_node = TreeNode(int(val))
+                    setattr(upper_node, child, new_node)
+                    queue.append(new_node)
+            i += 2
+        return root
 
 
-def make_tree(data):
-    """make binary tree from list
 
-    :param data: data source, an iterable obj
-    :return: the root of the binary tree.
-    """
-    if len(data) < 1:
-        return None
-    root = TreeNode(data[0])
-    queue = deque([root])
-    i = 1
-    while i < len(data):
-        try:
-            upper_node = queue.popleft()
-        except IndexError:
-            raise ValueError("bad data for binary tree")
-        for val, child in zip(data[i:i+2], ('left', 'right')):
-            if val is not None:
-                new_node = TreeNode(int(val))
-                setattr(upper_node, child, new_node)
-                queue.append(new_node)
-        i += 2
-    return root

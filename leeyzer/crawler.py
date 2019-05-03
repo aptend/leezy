@@ -197,8 +197,6 @@ class Problem:
             code.add_line('q.test()')
             code.dedent()
             code.add_line('\n')
-            code.add_line('if __name__ == "__main__":')
-            code.add_line('    main()')
         elif len(clss) == 1 and clss[0] != 'Solution' and len(self.sample_testcase) == 2:
             code.add_line(self.code_snippet)
             inst = clss[0].lower()
@@ -211,14 +209,13 @@ class Problem:
             code.add_line(f'    getattr({inst}, opt).__call__(*opd)')
             code.dedent()
             code.add_line('\n')
-            code.add_line('if __name__ == "__main__":')
-            code.add_line('    main()')
         else:
             code.add_line(
                 '# unrecoginzed solution pattern, leave it on your own\n')
             code.add_line(self.code_snippet)
             code.add_line('def main():\n    pass\n')
-            code.add_line('if __name__ == "__main__":\n    main()')
+        
+        code.add_line('if __name__ == "__main__":\n    main()')
 
         return str(code).replace('(object):', ':')
 
@@ -229,20 +226,18 @@ class Problem:
             return 'not found'
 
     def pull(self):
-        p_dir = Path(f'{self.id_}')
-        p_dir.mkdir(exist_ok=True)
         if self.frontend_id or self.lazy_init():
+            p_dir = Path(f'{self.id_}')
+            p_dir.mkdir(exist_ok=True)
             content = p_dir / f'{self.id_}.html'
             content.write_text(self.content, encoding='utf8')
             solution = p_dir / f'{self.id_}_{self.slug_title}.py'
             solution.write_text(self.generate_solution_tmpl(), encoding='utf8')
         else:
-            note = p_dir / f'caution.txt'
-            note.write_text(
-                'fetch problem failed: \n'
-                '1. check network; or\n'
-                '2. this problem is locked; or\n'
-                '3. this problem does not exist')
+            print('fetch problem failed: \n'
+                  '1. check network; or\n'
+                  '2. this problem is locked; or\n'
+                  '3. this problem does not exist')
 
 
 class CodeBuilder:
