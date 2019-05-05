@@ -1,33 +1,4 @@
 leetcode本地刷题小工具，少写一点print
-----
-
-
-# Why am I here?
-
-如果以下标签所描述的倾向，leeyzer可能会给你一些参考：
-
-【第一遍刷Leetcode】【使用本地编辑器】【愿意尝试一题多解】【希望少写print】
-
-还可以通过下面的问题进一步了解为什么要使用leeyzer
-
-- 为什么不在线刷题？
-
-    在线编辑器没有智能提示，run code的速度不稳定，不适合初期的debug。
-    因为是第一次做题，希望把重点放在解题本身，环境就使用自己习惯的就好。
-    在本地通过自己构想的测试用例后，再到网上提交。如果是第n遍刷题了，直接上web更方便。
-
-- leeyzer的核心是什么？
-
-    少些print。和上面提到的标签所暗示的那样，做题大概率不能一次成功，需要在本地用自己的测试用例反复运行，查看结果，debug。当使用多个解法时，又需要重复这些工作。所以一次性写完这些重复的print就是leeyzer最平常的目的
-
-- 和其他刷题工具有什么区别？
-    
-
-
-- 为什么没有登陆功能？
-
-
-
 
 # Quick Start
 
@@ -145,7 +116,101 @@ $ python 001/001_two-sum.py
 +----------+----------+---------------+---------------+
 ```
 
+# Why am I here?
+
+如果以下标签所描述的倾向，leeyzer可能会给你一些参考：
+
+【第一遍刷Leetcode】【使用本地编辑器】【愿意尝试一题多解】【希望少写print】
+
+还可以通过下面的问题进一步了解为什么要使用leeyzer
+
+- 为什么不在线刷题？
+
+    在线编辑器没有智能提示，run code的速度不稳定，不适合初期的debug。
+    因为是第一次做题，希望把重点放在解题本身，环境就使用自己习惯的就好。
+    在本地通过自己构想的测试用例后，再到网上提交。如果是第n遍刷题了，直接上web更方便。
+
+- leeyzer的核心是什么？
+
+    少写print。和上面提到的标签所暗示的那样，做题大概率不能一次成功，需要在本地用自己的测试用例反复运行，打印结果，修改。当使用多个解法时，又需要重复这些工作。所以一次性写完这些重复的print就是leeyzer最最平常且简单的目的
+
+- 和其他刷题工具有什么区别？
+    
+    其他的刷题工具，典型的有基于CLI的[leetcode-cli](https://github.com/skygragon/leetcode-cli), 基于VSCode的[leetcode for vscode](https://marketplace.visualstudio.com/items?itemName=shengchen.vscode-leetcode)，都支持完整的刷题流程：用户登录、题目拉取、编写、测试、提交、查看统计数据。本质也是把网页版的功能在用另一套接口进行实现。
+    
+    leeyzer仅仅把目标放在拉取、编写、测试上。相比上述工具，leeyzer对题目拉取后，模板文件不再和网页上提供的模板一致，更方便实现一题多解的本地调试
+
+- 之后有什么计划，会支持更完整的流程吗，比如登录、提交？
+
+    会考虑。但目前觉得提交并不是第一遍刷题过程中的阻碍点。个人更希望有一个导出功能，将每个solution连带其docstring导出为md格式，这样鼓励对每一个solution做笔记。最后这个md可以用作博客或者github仓库的原料。当然目前还要继续完善刷题的辅助类
+
+
+
+
+
 # Features
 
-## 题目拉取
+## 命令行
+
+使用`python -m leeyzer [command]`完成拉取题目的操作
+```
+$ python -m leeyzer -h
+usage: python -m leezyer [-h]  ...
+
+optional arguments:
+  -h, --help  show this help message and exit
+
+commands:
+  use 'python -m leeyzer command -h' to see more
+
+    pull      拉取题目到本地文件
+    show      打印编号的题目
+    update    更新题库
+```
+
 ## 辅助类
+
+针对使用链表或者树结构的题目，也提供了和网页版相同的基础类型，初始化的参数也和网页版保持一致。
+
+从`leeyzer.assists`中导入
+
+```python
+from leeyzer.assists import TreeNode, ListNode
+
+t = TreeNode.make_tree([1, 2, 3, 4, 5, None, 6])
+print(type(t)) # <class 'leeyzer.assists.TreeNode'>
+print(t)       # Tree(1-2-3-4-5-None-6)
+print(t.left)  # Tree(2-4-5)
+print(t.right) # Tree(3-None-6)
+l = ListNode.make_linked_list([1, 2, 3, 4, 5])
+print(type(l)) # <class 'leeyzer.assists.ListNode'>
+print(l)       # 1->2->3->4->5
+print(l.next)  # 2->3->4->5
+```
+
+现在支持的类型:
+
+- TreeNode
+- ListNode
+
+## 计时⏲
+
+除了solution装饰器，还有一个timeit装饰器，可以输出每个solution的运行时间
+```
+from leeyzer improt solution, timeit, Solution
+...
+
+@timeit
+@solution
+def s2(self):
+    time.sleep(1.234)
+    return 42
+...
+
+#output
++----------+---------------+
+|          |  s2           |
++==========+===============+
+|  case 0  |  42(1.2342s)  |
++----------+---------------+
+```
