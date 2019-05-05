@@ -214,16 +214,17 @@ class Problem:
                 '# unrecoginzed solution pattern, leave it on your own\n')
             code.add_line(self.code_snippet)
             code.add_line('def main():\n    pass\n')
-        
+
         code.add_line('if __name__ == "__main__":\n    main()')
 
         return str(code).replace('(object):', ':')
 
     def show(self):
-        if self.frontend_id or self.lazy_init():
-            return str(self)
+        title = self.provider.entry_repo.title_by_id(self.query_id)
+        if title:
+            print(f'Problem<{self.id_}: {title}>')
         else:
-            return 'not found'
+            print('not found')
 
     def pull(self):
         if self.frontend_id or self.lazy_init():

@@ -1,6 +1,7 @@
 import argparse
 from leeyzer.crawler import Problem, ProblemEntryRepo
 
+
 def update(args):
     ProblemEntryRepo().update()
 
@@ -10,11 +11,11 @@ def pull(args):
 
 
 def show(args):
-    print(Problem(args.id).show())
+    Problem(args.id).show()
 
 parser = argparse.ArgumentParser(prog='python -m leezyer')
 subs = parser.add_subparsers(
-    title="commands",  
+    title="commands",
     description="use 'python -m leeyzer command -h' to see more",
     metavar='')
 
@@ -31,9 +32,3 @@ update_parser.set_defaults(func=update)
 
 args = parser.parse_args()
 args.func(args)
-
-
-
-
-    
-

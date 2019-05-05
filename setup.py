@@ -10,5 +10,6 @@ setup(
     license="MIT",
     long_description=long_description,
     author='aptend',
-    packages=['leeyzer'],  # same as name
+    url='aptend@hotmail.com',
+    packages=['leeyzer']
 )

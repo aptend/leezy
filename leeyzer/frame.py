@@ -38,7 +38,7 @@ class Table:
     def add_row(self, row):
         self.__rows.append([str(x) for x in row])
 
-    def __determin_col_widths(self):
+    def __determine_col_widths(self):
         for colx in zip_longest(*self.__rows, fillvalue=self.fillup):
             self.col_widths.append(
                 min(self.max_col_width, max(map(len, colx))))
@@ -51,7 +51,7 @@ class Table:
         for text, i in zip_longest(row, self.dummy_iter, fillvalue=self.fillup):
             if self.max_cell_length > 6:
                 text = shorten(text, self.max_cell_length)
-            col_width = self.col_widths[i]            
+            col_width = max(1, self.col_widths[i])
             text = wrap(text, col_width)
             height = max(height, len(text))
             cells.append([f"{txt:<{col_width}}" for txt in text])
@@ -65,12 +65,12 @@ class Table:
                     line.append(cell[i])
             pad = self.pad_str
             content = f'{pad}|{pad}'.join(line)
-            self.lines.append(f'|  {content}  |')          
-    
+            self.lines.append(f'|  {content}  |')
+
     def format_sep_line(self, ch='-', sep='+'):
         parts = []
         for w in self.col_widths:
-            parts.append(ch*(w+2*self.pad))
+            parts.append(ch * (w + 2 * self.pad))
         self.lines.append(f"{sep}{'+'.join(parts)}{sep}")
 
     def format_head(self):
@@ -84,7 +84,7 @@ class Table:
             self.format_sep_line()
 
     def __str__(self):
-        self.__determin_col_widths()
+        self.__determine_col_widths()
         self.format_head()
         self.format_body()
         return '\n'.join(self.lines)
@@ -99,9 +99,12 @@ class ResultUnit:
         self.kwargs = None
         self.output = None
         self.duration = 0
+        self.dprecise = 4
         self.__dict__.update(kwargs)
 
     def __str__(self):
+        if hasattr(self.func_object, 'timeit'):
+            return f'{self.output}({self.duration:.{self.dprecise}f}s)'
         return f'{self.output}'
 
 
@@ -130,6 +133,8 @@ class Solution:
         return output, duration
 
     def _post_process(self):
+        if len(self.name_res) < 1:
+            return
         table = Table()
         header = ['']
         header.extend(self.name_res.keys())
@@ -146,14 +151,12 @@ class Solution:
                 output, duration = self._run_solution(f, args, kwargs)
                 r = ResultUnit(
                     batch_num=i,
-                    func_name = f.__name__,
-                    func_object = f,
-                    args = args,
-                    kwargs = kwargs,
-                    output = output,
-                    duration = duration)
+                    func_name=f.__name__,
+                    func_object=f,
+                    args=args,
+                    kwargs=kwargs,
+                    output=output,
+                    duration=duration)
                 self.name_res[r.func_name].append(r)
                 self.batch_res[i].append(r)
         self._post_process()
-
-
