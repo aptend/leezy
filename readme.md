@@ -1,8 +1,14 @@
-leetcode本地刷题小工具，少写一点print
+给Python的leetcode本地刷题小工具，少写一点print
 
 # Quick Start
 
 ## install
+
+Requirement: 
+- **Python >= 3.6**
+- requests >= 2.18.0
+
+在终端执行：
 ```shell
 $ git clone https://github.com/aptend/leezyer.git
 
@@ -182,6 +188,8 @@ print(type(t)) # <class 'leeyzer.assists.TreeNode'>
 print(t)       # Tree(1-2-3-4-5-None-6)
 print(t.left)  # Tree(2-4-5)
 print(t.right) # Tree(3-None-6)
+
+
 l = ListNode.make_linked_list([1, 2, 3, 4, 5])
 print(type(l)) # <class 'leeyzer.assists.ListNode'>
 print(l)       # 1->2->3->4->5
