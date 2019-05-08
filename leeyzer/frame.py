@@ -16,7 +16,16 @@ def timeit(func):
     """decorator. Attach the `func` a time marker
     """
     func.__dict__['timeit'] = True
+    func.__dict__['precision'] = 4
     return func
+
+
+def timeit_with_precision(precision):
+    def inject(func):
+        func.__dict__['timeit'] = True
+        func.__dict__['precision'] = int(precision)
+        return func
+    return inject
 
 
 class ResultUnit:
@@ -28,12 +37,12 @@ class ResultUnit:
         self.kwargs = None
         self.output = None
         self.duration = 0
-        self.dprecise = 4
         self.__dict__.update(kwargs)
 
     def __str__(self):
         if hasattr(self.func_object, 'timeit'):
-            return f'{self.output}({self.duration:.{self.dprecise}f}s)'
+            return (f'{self.output}'
+                    f'({self.duration:.{self.func_object.precision}f}s)')
         return f'{self.output}'
 
 
@@ -64,7 +73,8 @@ class Solution:
     def _post_process(self):
         if len(self.name_res) < 1:
             return
-        table = Table()
+        table_settings = CFG.open()['table']
+        table = Table(**table_settings)
         header = ['']
         header.extend(self.name_res.keys())
         table.add_header(header)

@@ -69,8 +69,8 @@ class Table:
     def __init__(self, **kwargs):
         self.__rows = [None]
         self.col_n = 0
-        self.max_col_width = 30
-        self.max_cell_length = 100
+        self.max_col_width = int(kwargs.get('max_col_width', 30))
+        self.max_content_length = int(kwargs.get('max_content_width', 100))
         self.pad = 2
         self.pad_str = ' ' * 2
         self.col_widths = []
@@ -94,8 +94,8 @@ class Table:
         cells = []
         height = 0
         for text, i in zip_longest(row, self.dummy_iter, fillvalue=self.fillup):
-            if self.max_cell_length > 6:
-                text = shorten(text, self.max_cell_length)
+            if self.max_content_length > 6:
+                text = shorten(text, self.max_content_length)
             col_width = max(1, self.col_widths[i])
             text = wrap(text, col_width)
             height = max(height, len(text))

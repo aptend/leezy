@@ -2,6 +2,4 @@
 leezyer: leetcode lazyer
 """
 
-__all__ = ['solution', 'Solution']
-
-from leeyzer.frame import solution, timeit, Solution
+from leeyzer.frame import solution, Solution, timeit, timeit_with_precision
