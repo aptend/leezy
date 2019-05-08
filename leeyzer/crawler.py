@@ -206,7 +206,8 @@ class Problem:
             code.add_line(f'operations = {self.sample_testcase[0]}')
             code.add_line(f'operands = {self.sample_testcase[1]}')
             code.add_line('for opt, opd in zip(operations, operands):')
-            code.add_line(f'    getattr({inst}, opt).__call__(*opd)')
+            code.add_line(f'    if hasattr({inst}, opt):')
+            code.add_line(f'        print(getattr({inst}, opt).__call__(*opd))')
             code.dedent()
             code.add_line('\n')
         else:
