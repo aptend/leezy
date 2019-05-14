@@ -45,7 +45,7 @@ class Q001(Solution):  # 继承Solution
 def main():
     q = Q001()
     q.add_args([2, 7, 11, 15], 9) # 添加自己的测试用例
-    q.test()
+    q.run()
 
 
 if __name__ == "__main__":
@@ -97,7 +97,7 @@ def main():
     q.add_args([2, 7, 11, 15], 9)
     q.add_args([2, 7, 11, 15], 17)
     q.add_args([2, 7, 11, 15], 26)
-    q.test()
+    q.run()
 
 
 if __name__ == "__main__":
@@ -158,7 +158,7 @@ $ python 001/001_two-sum.py
 
 ## 命令行
 
-使用`python -m leeyzer [command]`完成拉取题目的操作
+使用`python -m leeyzer [command]`完成拉取题目及设置相关操作
 ```
 $ python -m leeyzer -h
 usage: python -m leezyer [-h]  ...
@@ -172,7 +172,38 @@ commands:
     pull      拉取题目到本地文件
     show      打印编号的题目
     update    更新题库
+    config    全局配置
 ```
+
+其中config支持git风格的属性配置
+```
+usage: python -m leezyer config [-h] [--add | --unset | --list]
+
+optional arguments:
+  -h, --help  show this help message and exit
+  --add       name value
+  --unset     name
+  --list
+```
+
+目前支持使用config设置solution结果的表格设置, example:
+
+```
+$ python -m leeyzer config --add table.max_col_width 50
+
+$ python -m leeyzer config --add table.max_content_length -1
+
+$ python -m leeyzer config --unset table
+```
+
+可用配置项：
+| name | description | default | 
+|---|---|---|
+| table.max_col_width | 表格列的最大宽度 | 40字符 |
+| table.max_content_length | 每个单元格支持的最长内容长度，超过部分将被截断(-1表示不截断) | 100字符 |
+
+---
+
 
 ## 辅助类
 
@@ -201,6 +232,8 @@ print(l.next)  # 2->3->4->5
 - TreeNode
 - ListNode
 
+---
+
 ## 计时⏲
 
 除了solution装饰器，还有一个timeit装饰器，可以输出每个solution的运行时间
@@ -222,3 +255,5 @@ def s2(self):
 |  case 0  |  42(1.2342s)  |
 +----------+---------------+
 ```
+
+timeit的默认精度为小数点后4位，自定义精度可以使用@timeit_with_precison(precison: int)

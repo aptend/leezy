@@ -84,7 +84,7 @@ class Solution:
             table.add_row(row)
         print(table)
 
-    def test(self):
+    def run(self):
         for i, (args, kwargs) in enumerate(self._test_args):
             for f in self.solutions:
                 output, duration = self._run_solution(f, args, kwargs)

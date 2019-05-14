@@ -70,7 +70,7 @@ class Table:
         self.__rows = [None]
         self.col_n = 0
         self.max_col_width = int(kwargs.get('max_col_width', 30))
-        self.max_content_length = int(kwargs.get('max_content_width', 100))
+        self.max_content_length = int(kwargs.get('max_content_length', 100))
         self.pad = 2
         self.pad_str = ' ' * 2
         self.col_widths = []
