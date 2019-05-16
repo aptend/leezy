@@ -194,7 +194,7 @@ class Problem:
             code.indent()
             code.add_line(f'q = Q{self.id_}()')
             code.add_line(f'q.add_args({", ".join(self.sample_testcase)})')
-            code.add_line('q.test()')
+            code.add_line('q.run()')
             code.dedent()
             code.add_line('\n')
         elif len(clss) == 1 and clss[0] != 'Solution' and len(self.sample_testcase) == 2:

@@ -197,6 +197,8 @@ $ python -m leeyzer config --unset table
 ```
 
 可用配置项：
+
+
 | name | description | default | 
 |---|---|---|
 | table.max_col_width | 表格列的最大宽度 | 40字符 |
