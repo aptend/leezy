@@ -229,7 +229,7 @@ class Problem:
 
     def pull(self):
         if self.frontend_id or self.lazy_init():
-            p_dir = Path(f'{self.id_}')
+            p_dir = Path(f'{self.id_} - {self.title}')
             p_dir.mkdir(exist_ok=True)
             content = p_dir / f'{self.id_}.html'
             content.write_text(self.content, encoding='utf8')
