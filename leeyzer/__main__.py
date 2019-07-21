@@ -5,7 +5,7 @@ from leeyzer.utils import CFG
 
 
 def update(args):
-    ProblemEntryRepo().update()
+    ProblemEntryRepo(cn=args.cn).update()
 
 
 def pull(args):
@@ -43,6 +43,8 @@ show_parser.add_argument('id', help="题目编号")
 show_parser.set_defaults(func=show)
 
 update_parser = subs.add_parser('update', help='更新题库')
+update_parser.add_argument('--cn', action='store_true',
+                           help="从leetcode-cn.com拉取题库")
 update_parser.set_defaults(func=update)
 
 config_parser = subs.add_parser('config', help='全局配置')

@@ -12,8 +12,12 @@ logger = logging.getLogger()
 
 
 class ProblemEntryRepo:
-    def __init__(self):
-        self.all_problem_url = "https://leetcode-cn.com/api/problems/algorithms/"
+    def __init__(self, cn=False):
+        if cn:
+            src_url = "https://leetcode-cn.com/api/problems/algorithms/"
+        else:
+            src_url = "https://leetcode.com/api/problems/algorithms/"
+        self.all_problem_url = src_url
         self.logger = logger
         self.problems = None
         path = str(Path(tempfile.gettempdir()) / "leeyzer_problems.json")
