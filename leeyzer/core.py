@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from leeyzer.utils import Table
 from leeyzer.utils import CFG
+from leeyzer.assists import Context
 
 def solution(func):
     """decorator. Attach the `func` a solution marker
@@ -53,8 +54,13 @@ class Solution:
                           if hasattr(item, 'solution')]
         self.name_res = defaultdict(list)
         self.batch_res = defaultdict(list)
+        self.context = Context
 
+    def set_context(self, context_cls):
+        self.context = context_cls
+        
     def add_args(self, *args, **kwargs):
+        args, kwargs = self.context.transform_args(args, kwargs)
         self._test_args.append((args, kwargs))
 
     def outputs_by_name(self, name):

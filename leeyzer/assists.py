@@ -5,6 +5,25 @@
 #--------------------------------------------------------
 from collections import deque
 
+
+class LinkedListContext:
+    @staticmethod
+    def transform_args(args, kwargs):
+        args = [ListNode.make_linked_list(x) for x in args if isinstance(x, list)]
+        return args, kwargs
+
+class TreeContext:
+    @staticmethod
+    def transform_args(args, kwargs):
+        args = [TreeNode.make_tree(x) for x in args if isinstance(x, list)]
+        return args, kwargs
+
+class Context:
+    @staticmethod
+    def transform_args(args, kwargs):
+        return args, kwargs
+
+
 class ListNode:
     def __init__(self, x=None):
         self.val = x
