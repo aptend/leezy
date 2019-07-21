@@ -41,8 +41,8 @@ class ResultUnit:
 
     def __str__(self):
         if hasattr(self.func_object, 'timeit'):
-            return (f'{self.output}'
-                    f'({self.duration:.{self.func_object.precision}f}s)')
+            return (f'({self.duration:.{self.func_object.precision}f}s)'
+                    f'{self.output}')
         return f'{self.output}'
 
 
