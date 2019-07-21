@@ -19,20 +19,24 @@ class ProblemEntryRepo:
         path = str(Path(tempfile.gettempdir()) / "leeyzer_problems.json")
         self.problems_file = path
 
-    def names_by_id(self, id_):
+    def entry_by_id(self, id_):
         if self.problems is None:
             self.problems = self.all_problems()
         none_item = {
             "question__title": "",
-            "question__title_slug": ""
+            "question__title_slug": "",
+            "difficulty": ""
         }
         return self.problems.get(id_, none_item)
 
     def title_by_id(self, id_):
-        return self.names_by_id(str(id_))['question__title']
+        return self.entry_by_id(str(id_))['question__title']
 
     def slug_title_by_id(self, id_):
-        return self.names_by_id(str(id_))['question__title_slug']
+        return self.entry_by_id(str(id_))['question__title_slug']
+
+    def difficulty_by_id(self, id_):
+        return self.entry_by_id(str(id_))['difficulty']
 
     def all_problems(self):
         problems = self.local_all_problems()
@@ -78,11 +82,13 @@ class ProblemEntryRepo:
         if not raw_json:
             return {}
         problems = raw_json['stat_status_pairs']
+        levels = ['void', 'easy', 'medium', 'hard']
         maps = {}
         for p in problems:
             maps[p['stat']['frontend_question_id']] = {
                 "question__title": p['stat']['question__title'],
-                "question__title_slug": p['stat']['question__title_slug']
+                "question__title_slug": p['stat']['question__title_slug'],
+                "difficulty": levels[p['difficulty']['level']]
             }
         return maps
 
@@ -222,8 +228,9 @@ class Problem:
 
     def show(self):
         title = self.provider.entry_repo.title_by_id(self.query_id)
+        difficulty = self.provider.entry_repo.difficulty_by_id(self.query_id)
         if title:
-            print(f'Problem<{self.id_}: {title}>')
+            print(f'Problem<{self.id_}: {title}> @{difficulty}')
         else:
             print('not found')
 
