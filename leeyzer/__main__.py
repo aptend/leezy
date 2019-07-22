@@ -9,12 +9,13 @@ def update(args):
 
 
 def pull(args):
-    Problem(args.id).pull()
+    for pid in args.ids:
+        Problem(pid, args.context).pull()
 
 
 def show(args):
-    Problem(args.id).show()
-
+    for pid in args.ids:
+        Problem(pid).show()
 
 def config(args):
     kvs = CFG.open()
@@ -35,11 +36,13 @@ subs = parser.add_subparsers(
     metavar='')
 
 pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
-pull_parser.add_argument('id', help="题目编号")
+pull_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
+pull_parser.add_argument('--context', choices=['tree', 'linked_list'],
+                         help="题目上下文，影响题目参数转换")
 pull_parser.set_defaults(func=pull)
 
 show_parser = subs.add_parser('show', help='打印编号的题目')
-show_parser.add_argument('id', help="题目编号")
+show_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
 show_parser.set_defaults(func=show)
 
 update_parser = subs.add_parser('update', help='更新题库')

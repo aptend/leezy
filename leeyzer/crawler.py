@@ -159,8 +159,9 @@ class ProblemProvider:
 
 
 class Problem:
-    def __init__(self, id_, provider=None):
+    def __init__(self, id_, context=None, provider=None):
         self.query_id = id_
+        self.context = context
         self.id_ = str(id_).rjust(ID_WIDTH, '0')
         self.provider = provider or ProblemProvider()
         self.frontend_id = None
@@ -190,6 +191,10 @@ class Problem:
         code = CodeBuilder()
         if len(defs) == 1:
             code.add_line('from leeyzer import Solution, solution')
+            if self.context == 'tree':
+                code.add_line('from leeyzer.assists import TreeContext')
+            elif self.content == 'linked_list':
+                code.add_line('from leeyzer.assists import LinkedListContext')
             code.add_line('\n')
             code.add_line(f'class Q{self.id_}(Solution):')
             code.indent()
@@ -203,6 +208,10 @@ class Problem:
             code.add_line('def main():')
             code.indent()
             code.add_line(f'q = Q{self.id_}()')
+            if self.context == 'tree':
+                code.add_line('q.set_context(TreeContext)')
+            elif self.content == 'linked_list':
+                code.add_line('q.set_context(LinkedListContext)')
             code.add_line(f'q.add_args({", ".join(self.sample_testcase)})')
             code.add_line('q.run()')
             code.dedent()
