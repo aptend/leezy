@@ -9,13 +9,13 @@ from collections import deque
 class LinkedListContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [ListNode.make_linked_list(x) for x in args if isinstance(x, list)]
+        args = [ListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 class TreeContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [TreeNode.make_tree(x) for x in args if isinstance(x, list)]
+        args = [TreeNode.make_tree(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 class Context:
