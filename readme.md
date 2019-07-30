@@ -14,15 +14,28 @@ $ git clone https://github.com/aptend/leezyer.git
 
 $ python setup.py install
 ```
+
+[可选]设置alias：
+
+Linux  
+ `alias leeyzer='python -m leeyzer $*'`
+
+Windows  
+`DOSKEY leeyzer=python -m leeyzer $*`
+
 ## example
 
 1. 拉取题目
 
 在终端进入刷题目录：
 
- `$ python -m leeyzer pull 1`
+`$ python -m leeyzer pull 1`
 
-将在当前目录生成如下目录和文件
+如果设置了alias可直接使用  
+`$ leeyzer pull 1`
+
+
+在当前目录生成如下目录和文件
 ```
 $ tree
 .
@@ -234,7 +247,54 @@ print(l.next)  # 2->3->4->5
 - TreeNode
 - ListNode
 
-**TODO: 增加Context的说明和样例**
+
+
+除了手动使用`make_tree`, `make_linkedlist`构造相应的数据结构，还提供了TreeContext，LinkedListContext，将add_args传入的参数自动构造为书或链表。省得每次添加测试用例都要写`make_*`函数
+
+```python
+from leeyzer import Solution, solution
+from leeyzer.assists import TreeContext # 导入TreeContext
+
+
+class Q700(Solution):
+    @solution
+    def searchBST(self, root, val):
+        if root is None:
+            return
+        if root.val > val:
+            return self.searchBST(root.left, val)
+        elif root.val < val:
+            return self.searchBST(root.right, val)
+        else:
+            return root
+        
+    @solution
+    def search(self, root, val):
+        while root:
+            if root.val > val:
+                root = root.left
+            elif root.val < val:
+                root = root.right
+            else:
+                return root
+        return None
+
+
+def main():
+    q = Q700()
+    q.set_context(TreeContext)  # 设置TreeContex
+    q.add_args([4, 2, 7, 1, 3], 2) # 这里传入的列表自动会被转化为Tree
+    q.run()
+```
+
+为了进一步简化，`pull`命令支持--context选项
+```
+$ python -m leeyzer pull --context tree 700 701
+```
+
+这样700、701题的源文件自动添加好TreeContext
+
+
 ---
 
 ## 计时⏲
