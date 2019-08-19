@@ -8,6 +8,7 @@ from pathlib import Path
 import requests
 
 ID_WIDTH = 3
+NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
 logger = logging.getLogger()
 
 
@@ -174,10 +175,12 @@ class Problem:
 
     def lazy_init(self):
         detail = self.provider.detail_by_id(self.query_id)
-        if detail:
-            self.__dict__.update(detail)
-            return True
-        return False
+        if not detail:
+            return False
+        self.__dict__.update(detail)
+        self.title = NAME_BLACKLIST_RE.sub('', self.title)
+        self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title)
+        return True
 
     def __str__(self):
         return f'Problem<{self.id_}: {self.title}>'
