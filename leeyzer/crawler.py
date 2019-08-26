@@ -196,7 +196,7 @@ class Problem:
             code.add_line('from leeyzer import Solution, solution')
             if self.context == 'tree':
                 code.add_line('from leeyzer.assists import TreeContext')
-            elif self.content == 'linked_list':
+            elif self.context == 'linked_list':
                 code.add_line('from leeyzer.assists import LinkedListContext')
             code.add_line('\n')
             code.add_line(f'class Q{self.id_}(Solution):')
