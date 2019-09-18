@@ -7,9 +7,40 @@ from pathlib import Path
 
 import requests
 
+from .render import Render
+
 ID_WIDTH = 3
 NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
 logger = logging.getLogger()
+
+QUERY = """query questionData($titleSlug: String!) {
+  question(titleSlug: $titleSlug) {
+    questionId
+    questionFrontendId
+    title
+    titleSlug
+    content
+    isPaidOnly
+    difficulty
+    likes
+    dislikes
+    similarQuestions
+    topicTags {
+      name
+      slug
+    }
+    companyTagStats
+    codeSnippets {
+      langSlug
+      code
+    }
+    stats
+    hints
+    status
+    sampleTestCase
+  }
+}
+"""
 
 
 class ProblemEntryRepo:
@@ -104,14 +135,14 @@ class ProblemEntryRepo:
 
 class ProblemProvider:
     def __init__(self):
-        self.grapql_url = "https://leetcode-cn.com/graphql"
+        self.grapql_url = "https://leetcode.com/graphql"
         self.logger = logger
         self.entry_repo = ProblemEntryRepo()
 
     def query_payload(self, slug_title):
         query = {
             "operationName": "questionData",
-            "query": "query questionData($titleSlug: String!) {\n  question(titleSlug: $titleSlug) {\n     questionFrontendId\n   title\n   titleSlug\n    content\n    isPaidOnly\n    similarQuestions\n   codeSnippets {\n   langSlug\n    code\n  }\n    sampleTestCase\n   }\n}\n"
+            "query": QUERY
         }
         query['variables'] = {'titleSlug': slug_title}
         return query
@@ -133,6 +164,7 @@ class ProblemProvider:
         if r.status_code != 200:
             self.logger.warning(
                 "fetch problem %r bad status code: %d", slug_title, r.status_code)
+            return {}
         return r.json()
 
     def flush_raw_problem_detail(self, slug_title, raw_json):
@@ -143,6 +175,8 @@ class ProblemProvider:
                                 slug_title, raw_json['errors'][0]['message'])
             return {}
         raw = raw_json['data']['question']
+        if raw is None:
+            return {}
         if raw['isPaidOnly']:
             self.logger.warning('%r: locked', slug_title)
             return {}
@@ -186,62 +220,9 @@ class Problem:
         return f'Problem<{self.id_}: {self.title}>'
 
     def generate_solution_tmpl(self):
-        re_def = re.compile(r'^\s*(def .*:)\n', re.MULTILINE)
-        re_class = re.compile(r'^\s*class ([_\w\d]+)\(?.*\)?:\n', re.MULTILINE)
-        clss = re_class.findall(self.code_snippet)
-        defs = re_def.findall(self.code_snippet)
-
-        code = CodeBuilder()
-        if len(defs) == 1:
-            code.add_line('from leeyzer import Solution, solution')
-            if self.context == 'tree':
-                code.add_line('from leeyzer.assists import TreeContext')
-            elif self.context == 'linked_list':
-                code.add_line('from leeyzer.assists import LinkedListContext')
-            code.add_line('\n')
-            code.add_line(f'class Q{self.id_}(Solution):')
-            code.indent()
-            code.add_line('@solution')
-            code.add_line(defs[0])
-            code.indent()
-            code.add_line('pass')
-            code.dedent()
-            code.dedent()
-            code.add_line('\n')
-            code.add_line('def main():')
-            code.indent()
-            code.add_line(f'q = Q{self.id_}()')
-            if self.context == 'tree':
-                code.add_line('q.set_context(TreeContext)')
-            elif self.content == 'linked_list':
-                code.add_line('q.set_context(LinkedListContext)')
-            code.add_line(f'q.add_args({", ".join(self.sample_testcase)})')
-            code.add_line('q.run()')
-            code.dedent()
-            code.add_line('\n')
-        elif len(clss) == 1 and clss[0] != 'Solution' and len(self.sample_testcase) == 2:
-            code.add_line(self.code_snippet)
-            inst = clss[0].lower()
-            code.add_line('def main():')
-            code.indent()
-            code.add_line(f'{inst} = {clss[0]}()')
-            code.add_line(f'operations = {self.sample_testcase[0]}')
-            code.add_line(f'operands = {self.sample_testcase[1]}')
-            code.add_line('for opt, opd in zip(operations, operands):')
-            code.add_line(f'    if hasattr({inst}, opt):')
-            code.add_line(f'        print(getattr({inst}, opt).__call__(*opd))')
-            code.dedent()
-            code.add_line('\n')
-        else:
-            code.add_line(
-                '# unrecoginzed solution pattern, leave it on your own\n')
-            code.add_line(self.code_snippet)
-            code.add_line('def main():\n    pass\n')
-
-        code.add_line('if __name__ == "__main__":\n    main()')
-
-        return str(code).replace('(object):', ':')
-
+        render = Render(self)
+        return render.render()
+        
     def show(self):
         title = self.provider.entry_repo.title_by_id(self.query_id)
         difficulty = self.provider.entry_repo.difficulty_by_id(self.query_id)
@@ -263,31 +244,6 @@ class Problem:
                   '1. check network; or\n'
                   '2. this problem is locked; or\n'
                   '3. this problem does not exist')
-
-
-class CodeBuilder:
-    STEP = 4
-
-    def __init__(self, level=0):
-        self.code = []
-        self.level = level
-
-    def indent(self):
-        self.level += 1
-
-    def dedent(self):
-        self.level -= 1
-
-    def add_line(self, code_line):
-        self.code.extend([' ' * self.STEP * self.level, code_line, '\n'])
-
-    def add_section(self):
-        section = CodeBuilder(self.level)
-        self.code.append(section)
-        return section
-
-    def __str__(self):
-        return ''.join([str(c) for c in self.code])
 
 
 if __name__ == "__main__":
