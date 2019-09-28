@@ -227,7 +227,7 @@ $ python -m leeyzer config --unset table
 从`leeyzer.assists`中导入
 
 ```python
-from leeyzer.assists import TreeNode, ListNode
+from leeyzer.assists import TreeNode, LinkedListNode
 
 t = TreeNode.make_tree([1, 2, 3, 4, 5, None, 6])
 print(type(t)) # <class 'leeyzer.assists.TreeNode'>
@@ -236,8 +236,8 @@ print(t.left)  # Tree(2-4-5)
 print(t.right) # Tree(3-None-6)
 
 
-l = ListNode.make_linked_list([1, 2, 3, 4, 5])
-print(type(l)) # <class 'leeyzer.assists.ListNode'>
+l = LinkedListNode.make_linked_list([1, 2, 3, 4, 5])
+print(type(l)) # <class 'leeyzer.assists.LinkedListNode'>
 print(l)       # 1->2->3->4->5
 print(l.next)  # 2->3->4->5
 ```
@@ -245,7 +245,7 @@ print(l.next)  # 2->3->4->5
 现在支持的类型:
 
 - TreeNode
-- ListNode
+- LinkedListNode
 
 
 

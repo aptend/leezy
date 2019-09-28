@@ -9,7 +9,7 @@ from collections import deque
 class LinkedListContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [ListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
+        args = [LinkedListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 class TreeContext:
@@ -24,7 +24,7 @@ class Context:
         return args, kwargs
 
 
-class ListNode:
+class LinkedListNode:
     def __init__(self, x=None):
         self.val = x
         self.next = None
@@ -40,18 +40,25 @@ class ListNode:
 
     @staticmethod
     def make_linked_list(data):
-        """make linked list from list
+        """make a linked list from a list
         
-        [1,2,3,4] => 1(head) -> 2 -> 3 -> 4
-        :param data: data source, an iterable obj  
-        :return: the head of the linked list
+        Examples:
+        >>> ll = LinkedListNode.make_link_list([1, 2, 3, 4, 5])
+        >>> ll
+        1 -> 2 -> 3 -> 4 -> 5
+
+        Args:
+            data: data source, an iterable object.
+
+        Returns:
+            the head of the linked list, class `LinkedLinkedListNode`.
         """
         data = list(data)
         if len(data) == 0:
             return None
-        head = tail = ListNode(data[0])
+        head = tail = LinkedListNode(data[0])
         for item in data[1:]:
-            node = ListNode(item)
+            node = LinkedListNode(item)
             tail.next = node
             tail = node
         return head
@@ -82,10 +89,23 @@ class TreeNode:
     
     @staticmethod
     def make_tree(data):
-        """make binary tree from list
+        """make a binary tree from a list
 
-        :param data: data source, an iterable obj
-        :return: the root of the binary tree.
+        Examples:
+        >>> t = TreeNode.make_tree([1, 2, 3, 4])
+        >>> t.left
+        Tree(2-4)
+        >>> t.right
+        Tree(3)
+
+        Args:
+            data: a tree node value list in level traversal order
+        
+        Returns:
+            the root of the binary tree, class `TreeNode`.
+        
+        Raises:
+            ValueError: If the given data can't be made a vliad binary tree.
         """
         if len(data) < 1:
             return None
