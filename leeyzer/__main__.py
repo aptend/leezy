@@ -9,12 +9,18 @@ def update(args):
 
 
 def pull(args):
-    for pid in args.ids:
+    for pid in expand_ids(args.ids):
         Problem(pid, args.context).pull()
 
+def expand_ids(ids_arg):
+    if len(ids_arg) == 1 and ids_arg[0].count('-') == 1:
+        s, e = ids_arg[0].split('-')[:2]
+        return list(range(int(s), int(e)+1))
+    else:
+        return ids_arg
 
 def show(args):
-    for pid in args.ids:
+    for pid in expand_ids(args.ids):
         Problem(pid).show()
 
 def config(args):
