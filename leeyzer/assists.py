@@ -63,6 +63,28 @@ class LinkedListNode:
             tail = node
         return head
 
+    @staticmethod
+    def make_circle_list(head, n):
+        assert head is not None
+        if n < 0:
+            return head
+        # find tail
+        tail = head
+        while tail.next:
+            tail = tail.next
+
+        # find nth node
+        target, cnt = head, 0
+        while target:
+            if cnt == n:
+                break
+            cnt += 1
+            target = target.next
+
+        # link them
+        tail.next = target
+        return head
+
 
 class TreeNode:
     def __init__(self, x=None):

@@ -1,5 +1,6 @@
 import re
 from enum import Enum
+from .templite import Templite
 
 class TemplateType(Enum):
     Normal = 0  # single function solution
@@ -7,31 +8,62 @@ class TemplateType(Enum):
     Unkown = 2  # rare situation
 
 
-class CodeBuilder:
-    STEP = 4
+NormalTempl = """from leeyzer import solution, Solution
+{% if tree_context -%}
+from leeyzer.assists import TreeContext
+{% endif -%}
+{% if linkedlist_context -%}
+from leeyzer.assists import TreeContext
+{% endif -%}
 
-    def __init__(self, level=0):
-        self.code = []
-        self.level = level
-
-    def indent(self):
-        self.level += 1
-
-    def dedent(self):
-        self.level -= 1
-
-    def add_line(self, code_line):
-        self.code.extend([' ' * self.STEP * self.level, code_line, '\n'])
-
-    def add_section(self):
-        section = CodeBuilder(self.level)
-        self.code.append(section)
-        return section
-
-    def __str__(self):
-        return ''.join([str(c) for c in self.code])
+class Q{{id_}}(Solution):
+    @solution
+    {{defs.0}}
+        pass
 
 
+def main():
+    q = Q{{id_}}()
+{% if tree_context -%}
+    q.set_context(TreeContext)
+{% endif -%}
+{% if linkedlist_context -%}
+    q.set_context(LinkedListContext)
+{% endif -%}
+    q.add_args({{testcase}})
+    q.run()
+
+if __name__ == '__main__':
+    main()
+"""
+
+DesignTempl = """
+{{ code_snippet }}
+
+def main():
+    {{inst}} = {{clss.0}}()
+    operations = {{testcase.0}}
+    oprands = {{testcase.1}}
+    for opt, opd in zip(operations, oprands):
+        if hasattr({{inst}}, opt):
+            print(getattr({{inst}}, opt).__call__(*opd))
+
+
+if __name__ == '__main__':
+    main()
+"""
+
+UnkownTempl = """
+# unrecoginzed solution pattern, leave it on your own
+
+{{code_snippet}}
+
+def main():
+    pass
+
+if __name__ == '__main__':
+    main()
+"""
 
 class Render:
     def __init__(self, problem):
@@ -58,65 +90,35 @@ class Render:
         defs = re_def.findall(code_snippet)
         return defs, clss
 
-    def factory(self):
-        pass
-    
     def render(self):
-        problem = self.problem
         tmpl_type = self.template_type()
         defs, clss = self.extract_def_and_cls()
+        problem = self.problem
+        context = {
+            'defs': defs,
+            'clss': clss,
+        }
 
-        code = CodeBuilder()
-        add = code.add_line
+        code = ''
         if tmpl_type == TemplateType.Normal:
-            add('from leeyzer import Solution, solution')
-            if problem.context == 'tree':
-                add('from leeyzer.assists import TreeContext')
-            elif problem.context == 'linked_list':
-                add('from leeyzer.assists import LinkedListContext')
-            add('\n')
-            add(f'class Q{problem.id_}(Solution):')
-            code.indent()
-            add('@solution')
-            add(defs[0])
-            code.indent()
-            add('pass')
-            code.dedent()
-            code.dedent()
-            add('\n')
-            add('def main():')
-            code.indent()
-            add(f'q = Q{problem.id_}()')
-            if problem.context == 'tree':
-                add('q.set_context(TreeContext)')
-            elif problem.context == 'linked_list':
-                add('q.set_context(LinkedListContext)')
-            add(f'q.add_args({", ".join(problem.sample_testcase)})')
-            add('q.run()')
-            code.dedent()
-            add('\n')
+            context.update({
+                'tree_context': self.problem.context == 'tree',
+                'linkedlist_context': self.problem.context == 'linked_list',
+                'id_': problem.id_,
+                'testcase': ", ".join(problem.sample_testcase)
+            })
+            t = Templite(NormalTempl)
+            code = t.render(context)
         elif tmpl_type == TemplateType.Design:
-            add(problem.code_snippet)
-            inst = clss[0].lower()
-            add('def main():')
-            code.indent()
-            add(f'{inst} = {clss[0]}()')
-            add(f'operations = {problem.sample_testcase[0]}')
-            add(f'operands = {problem.sample_testcase[1]}')
-            add('for opt, opd in zip(operations, operands):')
-            code.indent()
-            add(f'if hasattr({inst}, opt):')
-            code.indent()
-            add(f'print(getattr({inst}, opt).__call__(*opd))')
-            code.dedent()
-            code.dedent()
-            code.dedent()
-            add('\n')
+            context.update({
+                'code_snippet': problem.code_snippet,
+                'inst': clss[0].lower(),
+                'testcase': problem.sample_testcase,
+            })
+            t = Templite(DesignTempl)
+            code = t.render(context)
         else:
-            add('# unrecoginzed solution pattern, leave it on your own\n')
-            add(problem.code_snippet)
-            add('def main():\n    pass\n')
+            t = Templite(UnkownTempl)
+            code = t.render(dict(code_snippet=problem.code_snippet))
 
-        add('if __name__ == "__main__":\n    main()')
-
-        return str(code).replace('(object):', ':')
+        return code.replace('(object):', ':')
