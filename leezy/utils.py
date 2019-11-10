@@ -41,7 +41,7 @@ class CFG:
 
     @staticmethod
     def open():
-        cfg = Path('~/.leeyzer').expanduser()
+        cfg = Path('~/.leezy').expanduser()
         def recursive_dd():
             return defaultdict(recursive_dd)
         hook = partial(defaultdict, recursive_dd)
@@ -52,7 +52,7 @@ class CFG:
 
     @staticmethod
     def write(kvs):
-        cfg = Path('~/.leeyzer').expanduser()
+        cfg = Path('~/.leezy').expanduser()
         cfg.write_text(json.dumps(kvs))
 
 

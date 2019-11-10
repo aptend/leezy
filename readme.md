@@ -1,4 +1,4 @@
-给Python的leetcode本地刷题小工具，少写一点print
+给Python的leetcode本地刷题小工具
 
 # Quick Start
 
@@ -10,7 +10,7 @@ Requirement:
 
 在终端执行：
 ```shell
-$ git clone https://github.com/aptend/leezyer.git
+$ git clone https://github.com/aptend/leezy.git
 
 $ python setup.py install
 ```
@@ -18,10 +18,10 @@ $ python setup.py install
 [可选]设置alias：
 
 Linux  
- `alias leeyzer='python -m leeyzer $*'`
+ `alias leezy='python -m leezy $*'`
 
 Windows  
-`DOSKEY leeyzer=python -m leeyzer $*`
+`DOSKEY leezy=python -m leezy $*`
 
 ## example
 
@@ -29,10 +29,10 @@ Windows
 
 在终端进入刷题目录：
 
-`$ python -m leeyzer pull 1`
+`$ python -m leezy pull 1`
 
 如果设置了alias可直接使用  
-`$ leeyzer pull 1`
+`$ leezy pull 1`
 
 
 在当前目录生成如下目录和文件
@@ -46,7 +46,7 @@ $ tree
 
 ```python
 # 001_two-sum.py(initial)
-from leeyzer import Solution, solution
+from leezy import Solution, solution
 
 
 class Q001(Solution):  # 继承Solution
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 2. 尝试死磕多种解法
 ```python
 # 001_two-sum.py(modified)
-from leeyzer import Solution, solution
+from leezy import Solution, solution
 
 
 class Q001(Solution):
@@ -137,11 +137,11 @@ $ python 001/001_two-sum.py
 
 # Why am I here?
 
-如果以下标签所描述的倾向，leeyzer可能会给你一些参考：
+如果以下标签所描述的倾向，leezy可能会给你一些参考：
 
-【第一遍刷Leetcode】【使用本地编辑器】【愿意尝试一题多解】【希望少写print】
+【第一遍刷Leetcode】【使用本地编辑器】【愿意尝试一题多解】【少些重复print、测试用例】
 
-还可以通过下面的问题进一步了解为什么要使用leeyzer
+还可以通过下面的问题进一步了解为什么要使用leezy
 
 - 为什么不在线刷题？
 
@@ -149,20 +149,15 @@ $ python 001/001_two-sum.py
     因为是第一次做题，希望把重点放在解题本身，环境就使用自己习惯的就好。
     在本地通过自己构想的测试用例后，再到网上提交。如果是第n遍刷题了，直接上web更方便。
 
-- leeyzer的核心是什么？
+- leezy的核心是什么？
 
-    少写print。和上面提到的标签所暗示的那样，做题大概率不能一次成功，需要在本地用自己的测试用例反复运行，打印结果，修改。当使用多个解法时，又需要重复这些工作。所以一次性写完这些重复的print就是leeyzer最最平常且简单的目的
+    少写print，少写重复测试用例。和上面提到的标签所暗示的那样，做题大概率不能一次成功，需要在本地用自己的测试用例反复运行，打印结果，修改。当使用多个解法时，又需要重复这些工作。所以一次性写完这些重复的print就是leezy最最平常且简单的目的
 
 - 和其他刷题工具有什么区别？
     
     其他的刷题工具，典型的有基于CLI的[leetcode-cli](https://github.com/skygragon/leetcode-cli), 基于VSCode的[leetcode for vscode](https://marketplace.visualstudio.com/items?itemName=shengchen.vscode-leetcode)，都支持完整的刷题流程：用户登录、题目拉取、编写、测试、提交、查看统计数据。本质也是把网页版的功能在用另一套接口进行实现。
     
-    leeyzer仅仅把目标放在拉取、编写、测试上。相比上述工具，leeyzer对题目拉取后，模板文件不再和网页上提供的模板一致，更方便实现一题多解的本地调试
-
-- 之后有什么计划，会支持更完整的流程吗，比如登录、提交？
-
-    会考虑。但目前觉得提交并不是第一遍刷题过程中的阻碍点。个人更希望有一个导出功能，将每个solution连带其docstring导出为md格式，这样鼓励对每一个solution做笔记。最后这个md可以用作博客或者github仓库的原料。当然目前还要继续完善刷题的辅助类
-
+    leezy仅仅把目标放在拉取、编写、测试上。相比上述工具，leezy对题目拉取后，模板文件不再和网页上提供的模板一致，更方便实现一题多解的本地调试
 
 
 
@@ -171,16 +166,16 @@ $ python 001/001_two-sum.py
 
 ## 命令行
 
-使用`python -m leeyzer [command]`完成拉取题目及设置相关操作
+使用`python -m leezy [command]`完成拉取题目及设置相关操作
 ```
-$ python -m leeyzer -h
-usage: python -m leezyer [-h]  ...
+$ python -m leezy -h
+usage: python -m leezy [-h]  ...
 
 optional arguments:
   -h, --help  show this help message and exit
 
 commands:
-  use 'python -m leeyzer command -h' to see more
+  use 'python -m leezy command -h' to see more
 
     pull      拉取题目到本地文件
     show      打印编号的题目
@@ -190,7 +185,7 @@ commands:
 
 其中config支持git风格的属性配置
 ```
-usage: python -m leezyer config [-h] [--add | --unset | --list]
+usage: python -m leezy config [-h] [--add | --unset | --list]
 
 optional arguments:
   -h, --help  show this help message and exit
@@ -202,11 +197,11 @@ optional arguments:
 目前支持使用config设置solution结果的表格设置, example:
 
 ```
-$ python -m leeyzer config --add table.max_col_width 50
+$ python -m leezy config --add table.max_col_width 50
 
-$ python -m leeyzer config --add table.max_content_length -1
+$ python -m leezy config --add table.max_content_length -1
 
-$ python -m leeyzer config --unset table
+$ python -m leezy config --unset table
 ```
 
 可用配置项：
@@ -224,20 +219,20 @@ $ python -m leeyzer config --unset table
 
 针对使用链表或者树结构的题目，也提供了和网页版相同的基础类型，初始化的参数也和网页版保持一致。
 
-从`leeyzer.assists`中导入
+从`leezy.assists`中导入
 
 ```python
-from leeyzer.assists import TreeNode, LinkedListNode
+from leezy.assists import TreeNode, LinkedListNode
 
 t = TreeNode.make_tree([1, 2, 3, 4, 5, None, 6])
-print(type(t)) # <class 'leeyzer.assists.TreeNode'>
+print(type(t)) # <class 'leezy.assists.TreeNode'>
 print(t)       # Tree(1-2-3-4-5-None-6)
 print(t.left)  # Tree(2-4-5)
 print(t.right) # Tree(3-None-6)
 
 
 l = LinkedListNode.make_linked_list([1, 2, 3, 4, 5])
-print(type(l)) # <class 'leeyzer.assists.LinkedListNode'>
+print(type(l)) # <class 'leezy.assists.LinkedListNode'>
 print(l)       # 1->2->3->4->5
 print(l.next)  # 2->3->4->5
 ```
@@ -252,8 +247,8 @@ print(l.next)  # 2->3->4->5
 除了手动使用`make_tree`, `make_linkedlist`构造相应的数据结构，还提供了TreeContext，LinkedListContext，将add_args传入的参数自动构造为书或链表。省得每次添加测试用例都要写`make_*`函数
 
 ```python
-from leeyzer import Solution, solution
-from leeyzer.assists import TreeContext # 导入TreeContext
+from leezy import Solution, solution
+from leezy.assists import TreeContext # 导入TreeContext
 
 
 class Q700(Solution):
@@ -289,7 +284,7 @@ def main():
 
 为了进一步简化，`pull`命令支持--context选项
 ```
-$ python -m leeyzer pull --context tree 700 701
+$ python -m leezy pull --context tree 700 701
 ```
 
 这样700、701题的源文件自动添加好TreeContext
@@ -301,7 +296,7 @@ $ python -m leeyzer pull --context tree 700 701
 
 除了solution装饰器，还有一个timeit装饰器，可以输出每个solution的运行时间
 ```
-from leeyzer improt solution, timeit, Solution
+from leezy improt solution, timeit, Solution
 ...
 
 @timeit

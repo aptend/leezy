@@ -8,12 +8,12 @@ class TemplateType(Enum):
     Unkown = 2  # rare situation
 
 
-NormalTempl = """from leeyzer import solution, Solution
+NormalTempl = """from leezy import solution, Solution
 {% if tree_context -%}
-from leeyzer.assists import TreeContext
+from leezy.assists import TreeContext
 {% endif -%}
 {% if linkedlist_context -%}
-from leeyzer.assists import TreeContext
+from leezy.assists import TreeContext
 {% endif -%}
 
 class Q{{id_}}(Solution):

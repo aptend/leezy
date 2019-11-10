@@ -52,7 +52,7 @@ class ProblemEntryRepo:
         self.all_problem_url = src_url
         self.logger = logger
         self.problems = None
-        path = str(Path(tempfile.gettempdir()) / "leeyzer_problems.json")
+        path = str(Path(tempfile.gettempdir()) / "leezy_problems.json")
         self.problems_file = path
 
     def entry_by_id(self, id_):

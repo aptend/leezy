@@ -2,9 +2,9 @@ from collections import defaultdict
 from time import perf_counter
 from copy import deepcopy
 
-from leeyzer.utils import Table
-from leeyzer.utils import CFG
-from leeyzer.assists import Context
+from leezy.utils import Table
+from leezy.utils import CFG
+from leezy.assists import Context
 
 def solution(func):
     """decorator. Attach the `func` a solution marker

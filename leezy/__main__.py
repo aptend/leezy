@@ -1,7 +1,7 @@
 import argparse
 
-from leeyzer.crawler import Problem, ProblemEntryRepo
-from leeyzer.utils import CFG
+from leezy.crawler import Problem, ProblemEntryRepo
+from leezy.utils import CFG
 
 
 def update(args):
@@ -35,10 +35,10 @@ def config(args):
         CFG.write(kvs)
         
 
-parser = argparse.ArgumentParser(prog='python -m leezyer')
+parser = argparse.ArgumentParser(prog='python -m leezy')
 subs = parser.add_subparsers(
     title="commands",
-    description="use 'python -m leeyzer command -h' to see more",
+    description="use 'python -m leezy command -h' to see more",
     metavar='')
 
 pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
