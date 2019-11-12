@@ -30,7 +30,7 @@ def main():
 {% if linkedlist_context -%}
     q.set_context(LinkedListContext)
 {% endif -%}
-    q.add_args({{testcase}})
+    q.add_case(q.case({{testcase}}))
     q.run()
 
 if __name__ == '__main__':
