@@ -169,7 +169,8 @@ class Solution:
         print(table)
 
     def run_cases_to_test(self):
-
+        if not self.test_cases:
+            return
         test_code = StringIO()
         test_code.write('from copy import deepcopy\n\n')
         for i, case in enumerate(self.test_cases):
