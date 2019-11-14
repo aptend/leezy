@@ -1,22 +1,27 @@
 
-#--------------------------------------------------------
+# --------------------------------------------------------
 # - linked list
 # - tree
-#--------------------------------------------------------
+# --------------------------------------------------------
 from collections import deque
+from itertools import zip_longest
 
 
 class LinkedListContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [LinkedListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
+        args = [LinkedListNode.make_linked_list(
+            x) if isinstance(x, list) else x for x in args]
         return args, kwargs
+
 
 class TreeContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [TreeNode.make_tree(x) if isinstance(x, list) else x for x in args]
+        args = [TreeNode.make_tree(x) if isinstance(
+            x, list) else x for x in args]
         return args, kwargs
+
 
 class Context:
     @staticmethod
@@ -38,10 +43,15 @@ class LinkedListNode:
     def __str__(self):
         return "->".join([str(v) for v in self])
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return all(x == y for x, y in zip_longest(self, other, fillvalue=None))
+
     @staticmethod
     def make_linked_list(data):
         """make a linked list from a list
-        
+
         Examples:
         >>> ll = LinkedListNode.make_link_list([1, 2, 3, 4, 5])
         >>> ll
@@ -108,7 +118,7 @@ class TreeNode:
                 yield node.val
                 remaining_nodes.append(node.left)
                 remaining_nodes.append(node.right)
-    
+
     @staticmethod
     def make_tree(data):
         """make a binary tree from a list
@@ -122,10 +132,10 @@ class TreeNode:
 
         Args:
             data: a tree node value list in level traversal order
-        
+
         Returns:
             the root of the binary tree, class `TreeNode`.
-        
+
         Raises:
             ValueError: If the given data can't be made a vliad binary tree.
         """
@@ -146,6 +156,3 @@ class TreeNode:
                     queue.append(new_node)
             i += 2
         return root
-
-
-
