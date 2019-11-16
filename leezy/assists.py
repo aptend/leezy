@@ -53,9 +53,9 @@ class LinkedListNode:
         """make a linked list from a list
 
         Examples:
-        >>> ll = LinkedListNode.make_link_list([1, 2, 3, 4, 5])
-        >>> ll
-        1 -> 2 -> 3 -> 4 -> 5
+        >>> ll = LinkedListNode.make_linked_list([1, 2, 3, 4, 5])
+        >>> print(ll)
+        1->2->3->4->5
 
         Args:
             data: data source, an iterable object.
@@ -125,9 +125,9 @@ class TreeNode:
 
         Examples:
         >>> t = TreeNode.make_tree([1, 2, 3, 4])
-        >>> t.left
+        >>> print(t.left)
         Tree(2-4)
-        >>> t.right
+        >>> print(t.right)
         Tree(3)
 
         Args:

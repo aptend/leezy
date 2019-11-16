@@ -58,13 +58,22 @@ class CFG:
 
 
 class Table:
-    """
-    输出类似这样的东东
-    +----------+------+
-    |          |  s2  |
-    +==========+======+
-    |  case 0  |  42  |
-    +----------+------+
+    """ Table format tool
+
+    Example:
+    >>> table = Table()
+    >>> table.add_header(['', 'Earth', 'Moon'])
+    >>> table.add_row(['Size', '42', '42'])
+    >>> print(table)
+    +--------+---------+--------+
+    |        |  Earth  |  Moon  |
+    +========+=========+========+
+    |  Size  |  42     |  42    |
+    +--------+---------+--------+
+
+    Args(Optional):
+        max_col_width: int, max column width
+        max_content_width: int, exceeded content will be shortened
     """
     def __init__(self, **kwargs):
         self.__rows = [None]
