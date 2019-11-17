@@ -3,14 +3,18 @@ import argparse
 from leezy.crawler import Problem, ProblemEntryRepo
 from leezy.utils import CFG
 
-
-def update(args):
-    ProblemEntryRepo(cn=args.cn).update()
+from leezy.errors import show_error_and_exit, LeezyError
 
 
 def pull(args):
     for pid in expand_ids(args.ids):
-        Problem(pid, args.context).pull()
+        try:
+            Problem(pid, args.context).pull()
+        except LeezyError as e:
+            show_error_and_exit(e)
+        except Exception as e:
+            print(f'Uncaught Exception: {e!r}')
+
 
 def expand_ids(ids_arg):
     if len(ids_arg) == 1 and ids_arg[0].count('-') == 1:
@@ -19,9 +23,16 @@ def expand_ids(ids_arg):
     else:
         return ids_arg
 
+
 def show(args):
     for pid in expand_ids(args.ids):
-        Problem(pid).show()
+        try:
+            print(Problem(pid).show())
+        except LeezyError as e:
+            show_error_and_exit(e)
+        except Exception as e:
+            print(f'Uncaught Exception: {e!r}')
+
 
 def config(args):
     kvs = CFG.open()
@@ -33,7 +44,7 @@ def config(args):
         CFG.unset(kvs, args.unset[0])
     if args.add or args.unset:
         CFG.write(kvs)
-        
+
 
 parser = argparse.ArgumentParser(prog='python -m leezy')
 subs = parser.add_subparsers(
@@ -51,11 +62,6 @@ show_parser = subs.add_parser('show', help='打印编号的题目')
 show_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
 show_parser.set_defaults(func=show)
 
-update_parser = subs.add_parser('update', help='更新题库')
-update_parser.add_argument('--cn', action='store_true',
-                           help="从leetcode-cn.com拉取题库")
-update_parser.set_defaults(func=update)
-
 config_parser = subs.add_parser('config', help='全局配置')
 group = config_parser.add_mutually_exclusive_group()
 group.add_argument('--add', nargs=2, metavar='', help='name value')
@@ -65,4 +71,3 @@ config_parser.set_defaults(func=config)
 
 args = parser.parse_args()
 args.func(args)
-

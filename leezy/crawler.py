@@ -4,10 +4,12 @@ import json
 import logging
 import tempfile
 from pathlib import Path
+from dataclasses import dataclass
 
 import requests
 
 from .render import Render
+from .errors import *
 
 ID_WIDTH = 3
 NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
@@ -43,6 +45,13 @@ QUERY = """query questionData($titleSlug: String!) {
 """
 
 
+@dataclass
+class Entry:
+    title: str
+    title_slug: str
+    difficulty: str
+
+
 class ProblemEntryRepo:
     def __init__(self, cn=False):
         if cn:
@@ -58,72 +67,56 @@ class ProblemEntryRepo:
     def entry_by_id(self, id_):
         if self.problems is None:
             self.problems = self.all_problems()
-        none_item = {
-            "question__title": "",
-            "question__title_slug": "",
-            "difficulty": ""
-        }
-        return self.problems.get(id_, none_item)
-
-    def title_by_id(self, id_):
-        return self.entry_by_id(str(id_))['question__title']
-
-    def slug_title_by_id(self, id_):
-        return self.entry_by_id(str(id_))['question__title_slug']
-
-    def difficulty_by_id(self, id_):
-        return self.entry_by_id(str(id_))['difficulty']
+        r = self.problems.get(str(id_), None)
+        if r is None:
+            self._update()
+            self.problems = self.all_problems()
+        r = self.problems.get(str(id_), None)
+        if r is None:
+            raise NotFound(f'Problem<{id_}> is not found')
+        return Entry(**r)
 
     def all_problems(self):
-        problems = self.local_all_problems()
+        problems = self.__local_all_problems()
         if not problems:
-            self.update()
-            problems = self.local_all_problems()
+            self._update()
+            problems = self.__local_all_problems()
         return problems
 
-    def local_all_problems(self):
+    def __local_all_problems(self):
         try:
             f = open(self.problems_file, encoding='utf8')
         except FileNotFoundError:
-            self.logger.info(
-                f'{self.problems_file} is not existed. updating expected')
             return {}
         problems = json.load(f)
         f.close()
         return problems
 
-    def update(self):
-        problems = self.web_all_problems()
-        if problems:
-            self.write_down_problems(problems)
-        else:
-            self.logger.warning("fetched 0 problem. updating aborted")
+    def _update(self):
+        problems = self.__web_all_problems()
+        self.write_down_problems(problems)
 
-    def web_all_problems(self):
-        raw = self.raw_web_all_problems()
-        return self.flush_raw_all_problems(raw)
+    def __web_all_problems(self):
+        raw = self.__raw_web_all_problems()
+        return self.__flush_raw_all_problems(raw)
 
-    def raw_web_all_problems(self):
+    def __raw_web_all_problems(self):
+        description = "can't fetch the list of problem entry"
         try:
             r = requests.get(self.all_problem_url)
         except requests.ConnectionError as err:
-            self.logger.warning("fetch all problems error: %r", err)
-            return {}
-        if r.status_code != 200:
-            self.logger.warning(
-                "fetch all problems bad status code: %d", r.status_code)
+            raise NetworkError(description, err)
+        raise_for_status(r, description)
         return r.json()
 
-    def flush_raw_all_problems(self, raw_json):
-        if not raw_json:
-            return {}
+    def __flush_raw_all_problems(self, raw_json):
         problems = raw_json['stat_status_pairs']
         levels = ['void', 'easy', 'medium', 'hard']
         maps = {}
         for p in problems:
             maps[p['stat']['frontend_question_id']] = {
-                "question__title": p['stat']['question__title'],
-                "question__title_slug": p['stat']['question__title_slug'],
+                "title": p['stat']['question__title'],
+                "title_slug": p['stat']['question__title_slug'],
                 "difficulty": levels[p['difficulty']['level']]
             }
         return maps
@@ -148,38 +141,32 @@ class ProblemProvider:
         return query
 
     def detail_by_id(self, id_):
-        slug_title = self.entry_repo.slug_title_by_id(id_)
-        raw = self.raw_problem_detail(slug_title)
-        detail = self.flush_raw_problem_detail(slug_title, raw)
+        entry = self.entry_repo.entry_by_id(id_)
+        raw = self.raw_problem_detail(entry.title_slug)
+        detail = self.flush_raw_problem_detail(entry.title_slug, raw)
         return detail
 
     def raw_problem_detail(self, slug_title):
         payload = self.query_payload(slug_title)
+        description = f"cat't fetch problem {slug_title!r} detail"
         try:
             r = requests.post(self.grapql_url, json=payload)
-        except requests.ConnectionError as err:
-            self.logger.warning(
-                "fetch problem %r detail error: %r", slug_title, err)
-            return {}
-        if r.status_code != 200:
-            self.logger.warning(
-                "fetch problem %r bad status code: %d", slug_title, r.status_code)
-            return {}
+        except requests.ConnectionError as e:
+            raise NetworkError(description, e)
+        raise_for_status(r, description)
         return r.json()
 
     def flush_raw_problem_detail(self, slug_title, raw_json):
-        if not raw_json:
-            return raw_json
         if 'errors' in raw_json:
-            self.logger.warning("%r: %s",
-                                slug_title, raw_json['errors'][0]['message'])
-            return {}
+            raise FetchError(
+                description=f"found errors when fetching {slug_title!r}",
+                cause=raw_json['errors'][0]['message'])
         raw = raw_json['data']['question']
         if raw is None:
-            return {}
+            raise FetchError(
+                f"found no content in response. Perhaps the server doesn't update in time")
         if raw['isPaidOnly']:
-            self.logger.warning('%r: locked', slug_title)
-            return {}
+            raise Locked(f'the problem {slug_title!r} is locked')
         new = {}
         new['frontend_id'] = raw['questionFrontendId']
         new['title'] = raw['title']
@@ -209,12 +196,9 @@ class Problem:
 
     def lazy_init(self):
         detail = self.provider.detail_by_id(self.query_id)
-        if not detail:
-            return False
         self.__dict__.update(detail)
         self.title = NAME_BLACKLIST_RE.sub('', self.title)
         self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title)
-        return True
 
     def __str__(self):
         return f'Problem<{self.id_}: {self.title}>'
@@ -222,28 +206,20 @@ class Problem:
     def generate_solution_tmpl(self):
         render = Render(self)
         return render.render()
-        
+
     def show(self):
-        title = self.provider.entry_repo.title_by_id(self.query_id)
-        difficulty = self.provider.entry_repo.difficulty_by_id(self.query_id)
-        if title:
-            print(f'Problem<{self.id_}: {title}> @{difficulty}')
-        else:
-            print('not found')
+        entry = self.provider.entry_repo.entry_by_id(self.query_id)
+        return f'Problem<{self.id_}: {entry.title}> @{entry.difficulty}'
 
     def pull(self):
-        if self.frontend_id or self.lazy_init():
-            p_dir = Path(f'{self.id_} - {self.title}')
-            p_dir.mkdir(exist_ok=True)
-            content = p_dir / f'{self.id_}.html'
-            content.write_text(self.content, encoding='utf8')
-            solution = p_dir / f'{self.id_}_{self.slug_title}.py'
-            solution.write_text(self.generate_solution_tmpl(), encoding='utf8')
-        else:
-            print('fetch problem failed: \n'
-                  '1. check network; or\n'
-                  '2. this problem is locked; or\n'
-                  '3. this problem does not exist')
+        if not self.frontend_id:
+            self.lazy_init()
+        p_dir = Path(f'{self.id_} - {self.title}')
+        p_dir.mkdir(exist_ok=True)
+        content = p_dir / f'{self.id_}.html'
+        content.write_text(self.content, encoding='utf8')
+        solution = p_dir / f'{self.id_}_{self.slug_title}.py'
+        solution.write_text(self.generate_solution_tmpl(), encoding='utf8')
 
 
 if __name__ == "__main__":
