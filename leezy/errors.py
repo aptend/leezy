@@ -2,19 +2,17 @@
 import sys
 import requests
 
+
 def show_error_and_exit(err):
     print(err)
     sys.exit(2)
+
 
 def raise_for_status(response, description):
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
         raise FetchError(description, e)
-
-
-class ConfigError(Exception):
-    pass
 
 
 class LeezyError(Exception):
@@ -35,12 +33,14 @@ class LeezyError(Exception):
 class NetworkError(LeezyError):
     pass
 
+
 class FetchError(LeezyError):
     pass
+
 
 class NotFound(LeezyError):
     pass
 
+
 class Locked(LeezyError):
     pass
-

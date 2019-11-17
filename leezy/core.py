@@ -6,8 +6,8 @@ from collections import defaultdict
 from time import perf_counter
 from copy import deepcopy
 from enum import Enum
-from itertools import product
 from io import StringIO
+from textwrap import shorten, dedent
 
 import pytest
 
@@ -58,18 +58,16 @@ class ResultUnit:
 
 
 FnTempl = """
-def test_{func}_case_{case_num}(solution_obj, cases):
-    case = deepcopy(cases[{case_num}])
-    output = solution_obj.{func}(*case.args, **case.kwargs)
-    assert case.assert_fn(output)
+def test_{func}_case_{case_num}(solution_obj, case{case_num}):
+    output = solution_obj.{func}(*case{case_num}.args, **case{case_num}.kwargs)
+    assert case{case_num}.assert_fn(output)
 
 """
 
 OutputTempl = """
-def test_{func}_case_{case_num}(solution_obj, cases):
-    case = deepcopy(cases[{case_num}])
-    output = solution_obj.{func}(*case.args, **case.kwargs)
-    assert output == case.assert_output
+def test_{func}_case_{case_num}(solution_obj, case{case_num}):
+    output = solution_obj.{func}(*case{case_num}.args, **case{case_num}.kwargs)
+    assert output == case{case_num}.assert_output
 
 """
 
@@ -86,6 +84,16 @@ class Testcase:
         self.kwargs = kwargs
         self.assert_output = None
         self.assert_fn = None
+
+    def __str__(self):
+        args = [str(arg) for arg in self.args]
+        for k, v in self.kwargs:
+            args.append(f"{k}={v}")
+        sig = ','.join(args)
+        return f"Testcase({shorten(sig, 100)})"
+
+    def __repr__(self):
+        return f'<{self}>'
 
     def test_kind(self):
         if self.assert_output is not None:
@@ -111,6 +119,14 @@ class Solution:
         self.nontest_cases = []
         self.test_cases = []
         self.context = Context
+
+    def __str__(self):
+        n = len(self.solutions)
+        plural = 's' if n > 0 else ''
+        return f"{self.__class__.__name__} with {n} solution{plural}"
+
+    def __repr__(self):
+        return f"<{self}>"
 
     def set_context(self, context_cls):
         self.context = context_cls
@@ -172,7 +188,6 @@ class Solution:
         if not self.test_cases:
             return
         test_code = StringIO()
-        test_code.write('from copy import deepcopy\n\n')
         for i, case in enumerate(self.test_cases):
             for func in self.solutions:
                 if case.test_kind() == TestKind.WithFn:
@@ -182,24 +197,37 @@ class Solution:
                 code = templ.format(case_num=i, func=func.__name__)
                 test_code.write(code)
 
-        q_instance = self
-
+        plugin_text = """
         class FixturePlugin:
+            def __init__(self, q_instance):
+                self.q = q_instance
+
             @pytest.fixture(scope='module')
             def solution_obj(self):
-                return q_instance
+                return self.q
+        """
 
+        case_text = """
             @pytest.fixture(scope='module')
-            def cases(self):
-                return q_instance.test_cases
+            def case{case_num}(self):
+                return deepcopy(self.q.test_cases[{case_num}])
+        """
+        for i in range(len(self.test_cases)):
+            plugin_text += case_text.format(case_num=i)
+
+        exec(dedent(plugin_text))
+
+        fixture_class = locals()['FixturePlugin']
 
         project_dir = Path(inspect.getfile(self.__class__)).parent.parent
         test_filename = f'test_{self.__class__.__name__}.py'
-        test_file = project_dir.parent / test_filename
+        test_file = project_dir / test_filename
         with open(test_file, 'w') as f:
             f.write(test_code.getvalue())
-        pytest.main(['-q', str(test_file)], plugins=[FixturePlugin()])
-        os.remove(test_file)
+        try:
+            pytest.main(['-q', str(test_file)], plugins=[fixture_class(self)])
+        finally:
+            os.remove(test_file)
 
     def run(self):
         self.run_cases_to_table()
