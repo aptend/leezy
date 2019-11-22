@@ -1,6 +1,6 @@
 import argparse
 
-from leezy.crawler import Problem, ProblemEntryRepo
+from leezy.crawler import Problem
 from leezy.utils import CFG
 
 from leezy.errors import show_error_and_exit, LeezyError
@@ -27,7 +27,7 @@ def expand_ids(ids_arg):
 def show(args):
     for pid in expand_ids(args.ids):
         try:
-            print(Problem(pid).show())
+            print(Problem(pid).digest())
         except LeezyError as e:
             show_error_and_exit(e)
         except Exception as e:
@@ -70,4 +70,7 @@ group.add_argument('--list', action='store_true')
 config_parser.set_defaults(func=config)
 
 args = parser.parse_args()
-args.func(args)
+if len(args._get_kwargs()) + len(args._get_args()) == 0:
+    parser.print_help()
+else:
+    args.func(args)

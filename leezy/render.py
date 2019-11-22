@@ -13,8 +13,9 @@ NormalTempl = """from leezy import solution, Solution
 from leezy.assists import TreeContext
 {% endif -%}
 {% if linkedlist_context -%}
-from leezy.assists import TreeContext
+from leezy.assists import LinkedListContext
 {% endif -%}
+
 
 class Q{{id_}}(Solution):
     @solution

@@ -207,7 +207,7 @@ class Problem:
         render = Render(self)
         return render.render()
 
-    def show(self):
+    def digest(self):
         entry = self.provider.entry_repo.entry_by_id(self.query_id)
         return f'Problem<{self.id_}: {entry.title}> @{entry.difficulty}'
 
