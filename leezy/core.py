@@ -133,7 +133,7 @@ class Solution:
 
     def case(self, *args, **kwargs):
         args, kwargs = self.context.transform_args(args, kwargs)
-        return Testcase(args, kwargs)
+        return Testcase(deepcopy(args), deepcopy(kwargs))
 
     def add_case(self, case):
         if case.test_kind() == TestKind.Null:
@@ -210,7 +210,7 @@ class Solution:
         case_text = """
             @pytest.fixture(scope='module')
             def case{case_num}(self):
-                return deepcopy(self.q.test_cases[{case_num}])
+                return self.q.test_cases[{case_num}]
         """
         for i in range(len(self.test_cases)):
             plugin_text += case_text.format(case_num=i)
