@@ -42,7 +42,7 @@ DesignTempl = """
 {{ code_snippet }}
 
 def main():
-    {{inst}} = {{clss.0}}()
+    {{inst}} = {{clss.0}}({{init_args}})
     operations = {{testcase.0}}
     oprands = {{testcase.1}}
     for opt, opd in zip(operations, oprands):
@@ -106,15 +106,22 @@ class Render:
                 'tree_context': self.problem.context == 'tree',
                 'linkedlist_context': self.problem.context == 'linked_list',
                 'id_': problem.id_,
-                'testcase': ", ".join(problem.sample_testcase)
+                'testcase': ", ".join(repr(x) for x in problem.sample_testcase)
             })
             t = Templite(NormalTempl)
             code = t.render(context)
         elif tmpl_type == TemplateType.Design:
+            testcase = problem.sample_testcase
+            init_args = ''
+            if testcase[0][0] == clss[0]: # first operation is initializing
+                init_args = ', '.join(repr(x) for x in testcase[1][0])
+                testcase[0] = testcase[0][1:]
+                testcase[1] = testcase[1][1:]
             context.update({
                 'code_snippet': problem.code_snippet,
                 'inst': clss[0].lower(),
-                'testcase': problem.sample_testcase,
+                'init_args': init_args,
+                'testcase': [repr(case) for case in testcase],
             })
             t = Templite(DesignTempl)
             code = t.render(context)

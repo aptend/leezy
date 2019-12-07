@@ -175,7 +175,7 @@ class ProblemProvider:
         new['smilar_problems'] = json.loads(raw['similarQuestions'])
         new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
                                sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
-        new['sample_testcase'] = [repr(json.loads(s)) for s
+        new['sample_testcase'] = [json.loads(s) for s
                                   in raw['sampleTestCase'].split('\n')]
         return new
 
