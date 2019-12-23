@@ -21,8 +21,18 @@ $ python setup.py install
 Linux  
  `alias leezy='python -m leezy $*'`
 
-Windows  
+Windows cmd  
 `DOSKEY leezy=python -m leezy $*`
+
+如果需要将alias持久化，Linux把alias命令写入shell配置文件，Windows下有两种方法：
+
+1. 参考该链接，将DOSKEY命令脚本写入注册表，每次cmd启动时运行，完成设置
+2. 编辑文件`leezy.cmd`，写入以下内容后，放入Python安装目录中的Scripts目录(该目录已在环境变量PATH中)
+```cmd
+@echo off
+python -m leezy %*
+```
+
 
 ## Examples
 
@@ -167,6 +177,42 @@ $ python "001 - Two Sum\001_two-sum.py"
 +----------+----------+-----------+
 .........                                                                   [100%]
 9 passed in 0.09s
+```
+
+此外，测试用例支持`assert_true_with(fn)`，传入自定义测试函数。比如第1054题，要求结果数组相邻的两个数不相等，因此可以构建如下的测试函数
+
+```python
+from itertools import chain
+from collections import Counter
+
+
+class Q1054(Solution):
+    @solution
+    def rearrangeBarcodes(self, barcodes):
+        # 452ms 92.03%
+        N = len(barcodes)
+        idx = chain(range(0, N, 2), range(1, N, 2))
+        counter = Counter(barcodes)
+        ans = [0] * N
+        for x, cnt in counter.most_common():
+            for _ in range(cnt):
+                ans[next(idx)] = x
+        return ans
+
+
+def main():
+    q = Q1054()
+
+    def check(A):
+        for x, nx in zip(A, A[1:]):
+            if x == nx:
+                return False
+        return True
+
+    q.add_case(q.case([1, 1, 1, 2, 2, 2]).assert_true_with(check))
+    q.add_case(q.case([1, 2, 2, 2, 5]).assert_true_with(check))
+    q.add_case(q.case([1, 1, 1, 1, 2, 2, 3, 3]).assert_true_with(check))
+    q.run()
 ```
 
 
