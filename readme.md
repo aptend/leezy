@@ -204,10 +204,7 @@ def main():
     q = Q1054()
 
     def check(A):
-        for x, nx in zip(A, A[1:]):
-            if x == nx:
-                return False
-        return True
+        return all(x != nx for x, nx in zip(A, A[1:])
 
     q.add_case(q.case([1, 1, 1, 2, 2, 2]).assert_true_with(check))
     q.add_case(q.case([1, 2, 2, 2, 5]).assert_true_with(check))
