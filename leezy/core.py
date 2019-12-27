@@ -84,6 +84,7 @@ class Testcase:
         self.kwargs = kwargs
         self.assert_output = None
         self.assert_fn = None
+        self._test_kind = TestKind.Null
 
     def __str__(self):
         args = [str(arg) for arg in self.args]
@@ -96,19 +97,16 @@ class Testcase:
         return f'<{self}>'
 
     def test_kind(self):
-        if self.assert_output is not None:
-            return TestKind.Output
-        elif self.assert_fn is not None:
-            return TestKind.WithFn
-        else:
-            return TestKind.Null
+        return self._test_kind
 
     def assert_equal(self, x):
         self.assert_output = x
+        self._test_kind = TestKind.Output
         return self
 
     def assert_true_with(self, fn):
         self.assert_fn = fn
+        self._test_kind = TestKind.WithFn
         return self
 
 
