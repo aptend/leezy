@@ -118,6 +118,12 @@ class TreeNode:
                 yield node.val
                 remaining_nodes.append(node.left)
                 remaining_nodes.append(node.right)
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return all(x == y for x, y in zip_longest(self, other, fillvalue=None))
+
 
     @staticmethod
     def make_tree(data):
