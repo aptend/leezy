@@ -197,8 +197,8 @@ class Problem:
     def lazy_init(self):
         detail = self.provider.detail_by_id(self.query_id)
         self.__dict__.update(detail)
-        self.title = NAME_BLACKLIST_RE.sub('', self.title)
-        self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title)
+        self.title = NAME_BLACKLIST_RE.sub('', self.title).strip()
+        self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title).strip()
 
     def __str__(self):
         return f'Problem<{self.id_}: {self.title}>'
