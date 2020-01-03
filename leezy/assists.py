@@ -4,22 +4,20 @@
 # - tree
 # --------------------------------------------------------
 from collections import deque
-from itertools import zip_longest
+from itertools import zip_longest, islice
 
 
 class LinkedListContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [LinkedListNode.make_linked_list(
-            x) if isinstance(x, list) else x for x in args]
+        args = [LinkedListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 
 class TreeContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [TreeNode.make_tree(x) if isinstance(
-            x, list) else x for x in args]
+        args = [TreeNode.make_tree(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 
@@ -33,6 +31,7 @@ class LinkedListNode:
     def __init__(self, x=None):
         self.val = x
         self.next = None
+        self.has_cycle = False
 
     def __iter__(self):
         p = self
@@ -41,9 +40,14 @@ class LinkedListNode:
             p = p.next
 
     def __str__(self):
-        return "->".join([str(v) for v in self])
+        if self.has_cycle:
+            return "->".join([str(v) for v in islice(self, 5)]) + '...'
+        else:
+            return "->".join([str(v) for v in self])
 
     def __eq__(self, other):
+        if self.has_cycle:
+            raise TypeError('__eq__ is not supported for linked list who has cycle')
         if not isinstance(other, self.__class__):
             return False
         return all(x == y for x, y in zip_longest(self, other, fillvalue=None))
@@ -102,8 +106,9 @@ class LinkedListNode:
         # find the tail
         tail = head
         while tail.next:
+            tail.has_cycle = True
             tail = tail.next
-
+        tail.has_cycle = True
         # find nth node
         target, cnt = head, 0
         while target:
