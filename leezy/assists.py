@@ -74,11 +74,32 @@ class LinkedListNode:
         return head
 
     @staticmethod
-    def make_circle_list(head, n):
-        assert head is not None
+    def make_cycle_list(data, n):
+        """make a linked list (has a cycle) from a list
+
+        Examples:
+        >>> cl = LinkedListNode.make_cycle_list([1, 2, 3], 0)
+        >>> cl.next.val
+        2
+        >>> cl.next.next.next.val
+        1
+
+        Args:
+            data: data source, an iterable object.
+            n: link the tail to the nth node. if n < 0 or n > len(data),
+               the returned linked list has no cycle.
+
+        Returns:
+            the head of the linked list, class `LinkedLinkedListNode`.
+        """
+        head = LinkedListNode.make_linked_list(data)
+        if head is None:
+            return None
+
         if n < 0:
             return head
-        # find tail
+
+        # find the tail
         tail = head
         while tail.next:
             tail = tail.next
@@ -118,12 +139,11 @@ class TreeNode:
                 yield node.val
                 remaining_nodes.append(node.left)
                 remaining_nodes.append(node.right)
-    
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
         return all(x == y for x, y in zip_longest(self, other, fillvalue=None))
-
 
     @staticmethod
     def make_tree(data):
