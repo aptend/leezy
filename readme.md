@@ -26,8 +26,8 @@ Windows cmd
 
 如果需要将alias持久化，Linux把alias命令写入shell配置文件，Windows下有两种方法：
 
-1. 参考该链接，将DOSKEY命令脚本写入注册表，每次cmd启动时运行，完成设置
-2. 编辑文件`leezy.cmd`，写入以下内容后，放入Python安装目录中的Scripts目录(该目录已在环境变量PATH中)
+1. 参考[该链接](https://stackoverflow.com/questions/20530996/aliases-in-windows-command-prompt)，将DOSKEY命令脚本写入注册表，每次cmd启动时运行，完成设置
+2. 编辑文件`leezy.cmd`，写入以下内容后，放入Python安装目录中的Scripts目录(该目录已在环境变量PATH中)。比如，安装的Anaconda发行版，目录大概是`D:\Anaconda3\Scripts`
 ```cmd
 @echo off
 python -m leezy %*
@@ -230,6 +230,7 @@ leezy名字来自于leetcode和lazy的组合。懒惰就是生产力。
     在线编辑器没有智能提示，run code的速度不稳定，不适合初期的debug。
     因为是第一次做题，希望把重点放在解题本身，环境就使用自己习惯的就好。
     在本地通过自己构想的测试用例后，再到网上提交。如果是第n遍刷题了，直接上web更方便。
+    当然本地刷题也有利于随时翻查复习啦
 
 - leezy的核心是什么？
 
