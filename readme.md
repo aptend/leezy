@@ -11,28 +11,8 @@ Requirements:
 
 在终端执行：
 ```shell
-$ git clone https://github.com/aptend/leezy.git
-
-$ python setup.py install
+$ pip install leezy
 ```
-
-[可选]设置alias：
-
-Linux  
- `alias leezy='python -m leezy $*'`
-
-Windows cmd  
-`DOSKEY leezy=python -m leezy $*`
-
-如果需要将alias持久化，Linux把alias命令写入shell配置文件，Windows下有两种方法：
-
-1. 参考[该链接](https://stackoverflow.com/questions/20530996/aliases-in-windows-command-prompt)，将DOSKEY命令脚本写入注册表，每次cmd启动时运行，完成设置
-2. 编辑文件`leezy.cmd`，写入以下内容后，放入Python安装目录中的Scripts目录(该目录已在环境变量PATH中)。比如，安装的Anaconda发行版，目录大概是`D:\Anaconda3\Scripts`
-```cmd
-@echo off
-python -m leezy %*
-```
-
 
 ## Examples
 
@@ -40,9 +20,6 @@ python -m leezy %*
 
 在终端进入刷题目录：
 
-`$ python -m leezy pull 1`
-
-如果设置了alias可直接使用  
 `$ leezy pull 1`
 
 
@@ -249,16 +226,16 @@ leezy名字来自于leetcode和lazy的组合。懒惰就是生产力。
 
 ## 命令行
 
-使用`python -m leezy [command]`完成拉取题目及设置相关操作
+使用`leezy [command]`完成拉取题目及设置相关操作
 ```
-$ python -m leezy -h
-usage: python -m leezy [-h]  ...
+$ leezy -h
+usage: leezy [-h] COMMAND [...]
 
 optional arguments:
   -h, --help  show this help message and exit
 
 commands:
-  use 'python -m leezy command -h' to see more
+  use 'leezy command -h' to see more
 
     pull      拉取题目到本地文件
     show      打印编号的题目
@@ -267,7 +244,7 @@ commands:
 
 其中config支持git风格的属性配置
 ```
-usage: python -m leezy config [-h] [--add | --unset | --list]
+usage: leezy config [-h] [--add | --unset | --list]
 
 optional arguments:
   -h, --help  show this help message and exit
@@ -279,11 +256,11 @@ optional arguments:
 目前支持使用config设置solution结果的表格设置, example:
 
 ```
-$ python -m leezy config --add table.max_col_width 50
+$ leezy config --add table.max_col_width 50
 
-$ python -m leezy config --add table.max_content_length -1
+$ leezy config --add table.max_content_length -1
 
-$ python -m leezy config --unset table
+$ leezy config --unset table
 ```
 
 可用配置项：
@@ -366,7 +343,7 @@ def main():
 
 为了进一步简化，`pull`命令支持--context选项
 ```
-$ python -m leezy pull --context tree 700 701
+$ leezy pull --context tree 700 701
 ```
 
 这样700、701题的源文件自动添加好TreeContext

@@ -4,7 +4,6 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from dataclasses import dataclass
 
 import requests
 
@@ -45,11 +44,11 @@ QUERY = """query questionData($titleSlug: String!) {
 """
 
 
-@dataclass
 class Entry:
-    title: str
-    title_slug: str
-    difficulty: str
+    def __init__(self, title, title_slug, difficulty):
+        self.title = title
+        self.title_slug = title_slug
+        self.difficulty= difficulty
 
 
 class ProblemEntryRepo:

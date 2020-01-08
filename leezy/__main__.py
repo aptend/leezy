@@ -46,10 +46,10 @@ def config(args):
         CFG.write(kvs)
 
 
-parser = argparse.ArgumentParser(prog='python -m leezy')
+parser = argparse.ArgumentParser(prog='leezy',usage='leezy [-h] COMMAND [...]')
 subs = parser.add_subparsers(
     title="commands",
-    description="use 'python -m leezy command -h' to see more",
+    description="use 'leezy command -h' to see more",
     metavar='')
 
 pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
@@ -74,3 +74,7 @@ if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
     args.func(args)
+
+# this is for setup:entry_points:console_scripts
+def dummy_main(*_args, **_kwargs):
+    return
