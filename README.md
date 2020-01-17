@@ -1,13 +1,8 @@
-给Python的leetcode本地刷题小工具
+# Leezy ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/leezy?style=plastic) ![PyPI](https://img.shields.io/pypi/v/leezy?style=plastic)
+给Python的LeetCode本地刷题工具
 
-# Quick Start
 
 ## Install
-
-Requirements: 
-- **Python >= 3.6**
-- requests >= 2.18.0
-- pytest >= 5.1.3
 
 在终端执行：
 ```shell
@@ -190,7 +185,7 @@ def main():
 ```
 
 
-# Why leezy?
+## Why leezy?
 
 leezy名字来自于leetcode和lazy的组合。懒惰就是生产力。
 
@@ -222,9 +217,9 @@ leezy名字来自于leetcode和lazy的组合。懒惰就是生产力。
 
 
 
-# More things
+## More things
 
-## 命令行
+### 命令行
 
 使用`leezy [command]`完成拉取题目及设置相关操作
 ```
@@ -275,7 +270,7 @@ $ leezy config --unset table
 ---
 
 
-## 辅助类
+### 辅助类
 
 针对使用链表或者树结构的题目，也提供了和网页版类似的基础类型，初始化的参数也和网页版保持一致。
 
@@ -348,6 +343,3 @@ $ leezy pull --context tree 700 701
 ```
 
 这样700、701题的源文件自动添加好TreeContext
-
-
----
