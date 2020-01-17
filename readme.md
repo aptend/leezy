@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
 3. 运行/查看结果
 ```shell
-$ python "001 - Two Sum\001_two-sum.py"
+$ leezy run 1
 +----------+----------+---------------+---------------+
 |          |  twoSum  |  twoSum_sort  |  twoSum_hash  |
 +==========+==========+===============+===============+
@@ -144,7 +144,7 @@ def main():
 
 运行后，为3个 solution 各自运行3个测试，总共通过9个
 ```shell
-$ python "001 - Two Sum\001_two-sum.py"
+$ leezy run 1
 +----------+----------+-----------+
 |          |  twoSum  |  two_sum  |
 +==========+==========+===========+
@@ -237,6 +237,7 @@ optional arguments:
 commands:
   use 'leezy command -h' to see more
 
+    run       运行题解
     pull      拉取题目到本地文件
     show      打印编号的题目
     config    全局配置

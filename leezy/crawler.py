@@ -48,7 +48,7 @@ class Entry:
     def __init__(self, title, title_slug, difficulty):
         self.title = title
         self.title_slug = title_slug
-        self.difficulty= difficulty
+        self.difficulty = difficulty
 
 
 class ProblemEntryRepo:
@@ -192,12 +192,18 @@ class Problem:
         self.smilar_problem = None
         self.code_snippet = None
         self.sample_testcase = None
+        self.html_path = None
+        self.py_path = None
+        self.folder_path = None
 
     def lazy_init(self):
         detail = self.provider.detail_by_id(self.query_id)
         self.__dict__.update(detail)
         self.title = NAME_BLACKLIST_RE.sub('', self.title).strip()
         self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title).strip()
+        self.folder_path = Path(f'{self.id_} - {self.title}')
+        self.html_path = self.folder_path / f'{self.id_}.html'
+        self.py_path = self.folder_path / f'{self.id_}_{self.slug_title}.py'
 
     def __str__(self):
         return f'Problem<{self.id_}: {self.title}>'
@@ -213,12 +219,9 @@ class Problem:
     def pull(self):
         if not self.frontend_id:
             self.lazy_init()
-        p_dir = Path(f'{self.id_} - {self.title}')
-        p_dir.mkdir(exist_ok=True)
-        content = p_dir / f'{self.id_}.html'
-        content.write_text(self.content, encoding='utf8')
-        solution = p_dir / f'{self.id_}_{self.slug_title}.py'
-        solution.write_text(self.generate_solution_tmpl(), encoding='utf8')
+        self.folder_path.mkdir(exist_ok=True)
+        self.html_path.write_text(self.content, encoding='utf8')
+        self.py_path.write_text(self.generate_solution_tmpl(), encoding='utf8')
 
 
 if __name__ == "__main__":

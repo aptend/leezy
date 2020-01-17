@@ -1,11 +1,11 @@
 from setuptools import setup
 
-with open("readme.md", 'r', encoding='utf8') as f:
+with open("README.md", 'r', encoding='utf8') as f:
     long_description = f.read()
 
 setup(
     name='leezy',
-    version='0.3.1',
+    version='0.3.2',
     description='leezy: leetcode helper for the lazy',
     license="MIT",
     long_description=long_description,
@@ -28,6 +28,6 @@ setup(
         'Topic :: Utilities'
     ],
     packages=['leezy'],
-    install_requires=['requests', 'pytest'],
+    install_requires=['requests>=2.18.0', 'pytest>=5.1.3'],
     python_requires='>=3.6'
 )

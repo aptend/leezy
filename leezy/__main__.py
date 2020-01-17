@@ -1,4 +1,5 @@
 import argparse
+import subprocess
 
 from leezy.crawler import Problem
 from leezy.utils import CFG
@@ -34,6 +35,23 @@ def show(args):
             print(f'Uncaught Exception: {e!r}')
 
 
+def run(args):
+    problem = Problem(args.id)
+    problem.lazy_init()
+    py_path = problem.py_path
+    if not py_path.is_file():
+        print(f'File not found: {py_path}')
+    else:
+        try:
+            subprocess.run(['python', str(py_path)], timeout=5)
+        except FileNotFoundError:
+            print('python can\'t be launched by command \'python\'')
+        except subprocess.TimeoutExpired:
+            print('Timeout(10s). Is there an infinite loop in the solution?')
+        except Exception:
+            raise
+
+
 def config(args):
     kvs = CFG.open()
     if args.list:
@@ -51,6 +69,10 @@ subs = parser.add_subparsers(
     title="commands",
     description="use 'leezy command -h' to see more",
     metavar='')
+
+run_parser = subs.add_parser('run', help='运行题解')
+run_parser.add_argument('id', type=int, help="题目编号")
+run_parser.set_defaults(func=run)
 
 pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
 pull_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
@@ -74,6 +96,7 @@ if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
     args.func(args)
+
 
 # this is for setup:entry_points:console_scripts
 def dummy_main(*_args, **_kwargs):
