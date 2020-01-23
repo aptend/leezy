@@ -36,9 +36,13 @@ def show(args):
 
 
 def run(args):
-    problem = Problem(args.id)
-    problem.lazy_init()
-    py_path = problem.py_path
+    try:
+        py_path = Problem(args.id).py_path
+    except LeezyError as e:
+        show_error_and_exit(e)
+    except Exception as e:
+        print(f'Uncaught Exception: {e!r}')
+
     if not py_path.is_file():
         print(f'File not found: {py_path}')
     else:

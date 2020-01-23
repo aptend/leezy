@@ -58,31 +58,20 @@ class ProblemEntryRepo:
         else:
             src_url = "https://leetcode.com/api/problems/algorithms/"
         self.all_problem_url = src_url
-        self.logger = logger
-        self.problems = None
         path = str(Path(tempfile.gettempdir()) / "leezy_problems.json")
         self.problems_file = path
+        self.problems = self._load_local_cache()
 
     def entry_by_id(self, id_):
-        if self.problems is None:
-            self.problems = self.all_problems()
         r = self.problems.get(str(id_), None)
         if r is None:
-            self._update()
-            self.problems = self.all_problems()
-        r = self.problems.get(str(id_), None)
-        if r is None:
-            raise NotFound(f'Problem<{id_}> is not found')
+            self._update_cache()
+            r = self.problems.get(str(id_), None)
+            if r is None:
+                raise NotFound(f'Problem<{id_}> is not found')
         return Entry(**r)
 
-    def all_problems(self):
-        problems = self.__local_all_problems()
-        if not problems:
-            self._update()
-            problems = self.__local_all_problems()
-        return problems
-
-    def __local_all_problems(self):
+    def _load_local_cache(self):
         try:
             f = open(self.problems_file, encoding='utf8')
         except FileNotFoundError:
@@ -91,15 +80,12 @@ class ProblemEntryRepo:
         f.close()
         return problems
 
-    def _update(self):
-        problems = self.__web_all_problems()
-        self.write_down_problems(problems)
-
-    def __web_all_problems(self):
-        raw = self.__raw_web_all_problems()
-        return self.__flush_raw_all_problems(raw)
-
-    def __raw_web_all_problems(self):
+    def _update_cache(self):
+        raw_problems = self._raw_web_all_problems()
+        self.problems = self._flush_raw_all_problems(raw_problems)
+        self.write_down_problems(self.problems)
+ 
+    def _raw_web_all_problems(self):
         description = "can't fetch the list of problem entry"
         try:
             r = requests.get(self.all_problem_url)
@@ -108,7 +94,7 @@ class ProblemEntryRepo:
         raise_for_status(r, description)
         return r.json()
 
-    def __flush_raw_all_problems(self, raw_json):
+    def _flush_raw_all_problems(self, raw_json):
         problems = raw_json['stat_status_pairs']
         levels = ['void', 'easy', 'medium', 'hard']
         maps = {}
@@ -128,10 +114,18 @@ class ProblemEntryRepo:
 class ProblemProvider:
     def __init__(self):
         self.grapql_url = "https://leetcode.com/graphql"
-        self.logger = logger
         self.entry_repo = ProblemEntryRepo()
 
-    def query_payload(self, slug_title):
+    def info_by_id(self, id_):
+        return self.entry_repo.entry_by_id(id_)
+
+    def detail_by_id(self, id_):
+        entry = self.entry_repo.entry_by_id(id_)
+        raw = self._raw_problem_detail(entry.title_slug)
+        detail = self._flush_raw_problem_detail(entry.title_slug, raw)
+        return detail
+
+    def _query_payload(self, slug_title):
         query = {
             "operationName": "questionData",
             "query": QUERY
@@ -139,14 +133,8 @@ class ProblemProvider:
         query['variables'] = {'titleSlug': slug_title}
         return query
 
-    def detail_by_id(self, id_):
-        entry = self.entry_repo.entry_by_id(id_)
-        raw = self.raw_problem_detail(entry.title_slug)
-        detail = self.flush_raw_problem_detail(entry.title_slug, raw)
-        return detail
-
-    def raw_problem_detail(self, slug_title):
-        payload = self.query_payload(slug_title)
+    def _raw_problem_detail(self, slug_title):
+        payload = self._query_payload(slug_title)
         description = f"cat't fetch problem {slug_title!r} detail"
         try:
             r = requests.post(self.grapql_url, json=payload)
@@ -155,15 +143,14 @@ class ProblemProvider:
         raise_for_status(r, description)
         return r.json()
 
-    def flush_raw_problem_detail(self, slug_title, raw_json):
+    def _flush_raw_problem_detail(self, slug_title, raw_json):
         if 'errors' in raw_json:
             raise FetchError(
                 description=f"found errors when fetching {slug_title!r}",
                 cause=raw_json['errors'][0]['message'])
         raw = raw_json['data']['question']
         if raw is None:
-            raise FetchError(
-                f"found no content in response. Perhaps the server doesn't update in time")
+            raise FetchError("No content in response.")
         if raw['isPaidOnly']:
             raise Locked(f'the problem {slug_title!r} is locked')
         new = {}
@@ -185,45 +172,38 @@ class Problem:
         self.context = context
         self.id_ = str(id_).rjust(ID_WIDTH, '0')
         self.provider = provider or ProblemProvider()
-        self.frontend_id = None
-        self.title = None
-        self.slug_title = None
-        self.content = None
-        self.smilar_problem = None
-        self.code_snippet = None
-        self.sample_testcase = None
-        self.html_path = None
-        self.py_path = None
-        self.folder_path = None
 
-    def lazy_init(self):
-        detail = self.provider.detail_by_id(self.query_id)
-        self.__dict__.update(detail)
-        self.title = NAME_BLACKLIST_RE.sub('', self.title).strip()
-        self.slug_title = NAME_BLACKLIST_RE.sub('', self.slug_title).strip()
+        basic_info = self.provider.info_by_id(id_)
+        self.title = NAME_BLACKLIST_RE.sub('', basic_info.title).strip()
+        self.slug_title = NAME_BLACKLIST_RE.sub('', basic_info.title_slug).strip()
+        self.difficulty = basic_info.difficulty
         self.folder_path = Path(f'{self.id_} - {self.title}')
         self.html_path = self.folder_path / f'{self.id_}.html'
         self.py_path = self.folder_path / f'{self.id_}_{self.slug_title}.py'
 
+        self.frontend_id = None
+        self.content = None
+        self.smilar_problem = None
+        self.code_snippet = None
+        self.sample_testcase = None
+
+    def _lazy_init(self):
+        detail = self.provider.detail_by_id(self.query_id)
+        self.__dict__.update(detail)
+
     def __str__(self):
         return f'Problem<{self.id_}: {self.title}>'
 
-    def generate_solution_tmpl(self):
+    def _generate_solution_tmpl(self):
         render = Render(self)
         return render.render()
 
     def digest(self):
-        entry = self.provider.entry_repo.entry_by_id(self.query_id)
-        return f'Problem<{self.id_}: {entry.title}> @{entry.difficulty}'
+        return f'Problem<{self.id_}: {self.title}> @{self.difficulty}'
 
     def pull(self):
         if not self.frontend_id:
-            self.lazy_init()
+            self._lazy_init()
         self.folder_path.mkdir(exist_ok=True)
         self.html_path.write_text(self.content, encoding='utf8')
-        self.py_path.write_text(self.generate_solution_tmpl(), encoding='utf8')
-
-
-if __name__ == "__main__":
-    p = Problem(sys.argv[1])
-    p.show()
+        self.py_path.write_text(self._generate_solution_tmpl(), encoding='utf8')
