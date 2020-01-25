@@ -2,7 +2,7 @@ import argparse
 import subprocess
 
 from leezy.crawler import Problem
-from leezy.utils import CFG
+from leezy.config import config
 
 from leezy.errors import show_error_and_exit, LeezyError
 
@@ -47,7 +47,9 @@ def run(args):
         print(f'File not found: {py_path}')
     else:
         try:
-            subprocess.run(['python', str(py_path)], timeout=5)
+            subprocess.run(['python', str(py_path)],
+                           timeout=5,
+                           cwd=py_path.parent)
         except FileNotFoundError:
             print('python can\'t be launched by command \'python\'')
         except subprocess.TimeoutExpired:
@@ -56,19 +58,17 @@ def run(args):
             raise
 
 
-def config(args):
-    kvs = CFG.open()
+def handle_config(args):
     if args.list:
-        print('\n'.join(map('='.join, CFG.fetch_all(kvs, ''))))
+        print('\n'.join('='.join((k, str(v))) for k, v in config.get_all()))
     elif args.add:
-        CFG.store(kvs, args.add[0], args.add[1])
+        config.put(args.add[0], args.add[1])
     elif args.unset:
-        CFG.unset(kvs, args.unset[0])
-    if args.add or args.unset:
-        CFG.write(kvs)
+        config.delete(args.unset[0])
 
 
-parser = argparse.ArgumentParser(prog='leezy',usage='leezy [-h] COMMAND [...]')
+parser = argparse.ArgumentParser(
+    prog='leezy', usage='leezy [-h] COMMAND [...]')
 subs = parser.add_subparsers(
     title="commands",
     description="use 'leezy command -h' to see more",
@@ -90,10 +90,10 @@ show_parser.set_defaults(func=show)
 
 config_parser = subs.add_parser('config', help='全局配置')
 group = config_parser.add_mutually_exclusive_group()
-group.add_argument('--add', nargs=2, metavar='', help='name value')
-group.add_argument('--unset', nargs=1, metavar='', help='name')
+group.add_argument('--add', nargs=2, metavar='', help='NAME VALUE')
+group.add_argument('--unset', nargs=1, metavar='', help='NAME')
 group.add_argument('--list', action='store_true')
-config_parser.set_defaults(func=config)
+config_parser.set_defaults(func=handle_config)
 
 args = parser.parse_args()
 if len(args._get_kwargs()) + len(args._get_args()) == 0:

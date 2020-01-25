@@ -7,8 +7,10 @@ from pathlib import Path
 
 import requests
 
-from .render import Render
-from .errors import *
+from leezy.render import Render
+from leezy.errors import *
+from leezy.config import config
+
 
 ID_WIDTH = 3
 NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
@@ -177,7 +179,8 @@ class Problem:
         self.title = NAME_BLACKLIST_RE.sub('', basic_info.title).strip()
         self.slug_title = NAME_BLACKLIST_RE.sub('', basic_info.title_slug).strip()
         self.difficulty = basic_info.difficulty
-        self.folder_path = Path(f'{self.id_} - {self.title}')
+        workdir = Path(config.get('core.workdir'))
+        self.folder_path = workdir / Path(f'{self.id_} - {self.title}')
         self.html_path = self.folder_path / f'{self.id_}.html'
         self.py_path = self.folder_path / f'{self.id_}_{self.slug_title}.py'
 
@@ -204,6 +207,6 @@ class Problem:
     def pull(self):
         if not self.frontend_id:
             self._lazy_init()
-        self.folder_path.mkdir(exist_ok=True)
+        self.folder_path.mkdir(parents=True, exist_ok=True)
         self.html_path.write_text(self.content, encoding='utf8')
         self.py_path.write_text(self._generate_solution_tmpl(), encoding='utf8')

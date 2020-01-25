@@ -12,7 +12,7 @@ from textwrap import shorten, dedent
 import pytest
 
 from leezy.utils import Table
-from leezy.utils import CFG
+from leezy.config import config
 from leezy.assists import Context
 
 
@@ -171,7 +171,7 @@ class Solution:
         # draw table
         if not result_by_case:
             return
-        table_settings = CFG.open()['table']
+        table_settings = config.get('table')
         table = Table(**table_settings)
         header = ['']
         header.extend([func.__name__ for func in self.solutions])
