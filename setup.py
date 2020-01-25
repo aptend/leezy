@@ -5,7 +5,7 @@ with open("README.md", 'r', encoding='utf8') as f:
 
 setup(
     name='leezy',
-    version='0.3.2',
+    version='0.3.3',
     description='leezy: leetcode helper for the lazy',
     license="MIT",
     long_description=long_description,

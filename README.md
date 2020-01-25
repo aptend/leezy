@@ -11,14 +11,21 @@ $ pip install leezy
 
 ## Examples
 
+0. 设置工作目录
+```shell
+$ leezy config --add core.workdir <DIR>
+```
+例如`leezy config --add core.workdir D:\leetcode`
+
 1. 拉取题目
 
-在终端进入刷题目录：
 
-`$ leezy pull 1`
+```shell
+$ leezy pull 1
+```
 
 
-在当前目录生成如下目录和文件
+在`workdir`下生成如下目录和文件
 ```
 $ tree
 .
@@ -266,6 +273,7 @@ $ leezy config --unset table
 |---|---|---|
 | table.max_col_width | 表格列的最大宽度 | 40字符 |
 | table.max_content_length | 每个单元格支持的最长内容长度，超过部分将被截断(-1表示不截断) | 100字符 |
+| core.workdir | 刷题目录，每次pull、run都将基础该目录 | 当前目录 |
 
 ---
 
