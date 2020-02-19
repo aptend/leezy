@@ -34,6 +34,7 @@ def main():
     q.add_case(q.case({{testcase}}))
     q.run()
 
+
 if __name__ == '__main__':
     main()
 """
