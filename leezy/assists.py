@@ -10,7 +10,7 @@ from itertools import zip_longest, islice
 class LinkedListContext:
     @staticmethod
     def transform_args(args, kwargs):
-        args = [LinkedListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
+        args = [ListNode.make_linked_list(x) if isinstance(x, list) else x for x in args]
         return args, kwargs
 
 
@@ -27,7 +27,7 @@ class Context:
         return args, kwargs
 
 
-class LinkedListNode:
+class ListNode:
     def __init__(self, x=None):
         self.val = x
         self.next = None
@@ -57,7 +57,7 @@ class LinkedListNode:
         """make a linked list from a list
 
         Examples:
-        >>> ll = LinkedListNode.make_linked_list([1, 2, 3, 4, 5])
+        >>> ll = ListNode.make_linked_list([1, 2, 3, 4, 5])
         >>> print(ll)
         1->2->3->4->5
 
@@ -70,9 +70,9 @@ class LinkedListNode:
         data = list(data)
         if len(data) == 0:
             return None
-        head = tail = LinkedListNode(data[0])
+        head = tail = ListNode(data[0])
         for item in data[1:]:
-            node = LinkedListNode(item)
+            node = ListNode(item)
             tail.next = node
             tail = node
         return head
@@ -82,7 +82,7 @@ class LinkedListNode:
         """make a linked list (has a cycle) from a list
 
         Examples:
-        >>> cl = LinkedListNode.make_cycle_list([1, 2, 3], 0)
+        >>> cl = ListNode.make_cycle_list([1, 2, 3], 0)
         >>> cl.next.val
         2
         >>> cl.next.next.next.val
@@ -96,7 +96,7 @@ class LinkedListNode:
         Returns:
             the head of the linked list, class `LinkedLinkedListNode`.
         """
-        head = LinkedListNode.make_linked_list(data)
+        head = ListNode.make_linked_list(data)
         if head is None:
             return None
 

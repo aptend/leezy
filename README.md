@@ -285,7 +285,7 @@ $ leezy config --unset table
 从`leezy.assists`中导入
 
 ```python
-from leezy.assists import TreeNode, LinkedListNode
+from leezy.assists import TreeNode, ListNode
 
 t = TreeNode.make_tree([1, 2, 3, 4, 5, None, 6])
 print(type(t)) # <class 'leezy.assists.TreeNode'>
@@ -294,8 +294,8 @@ print(t.left)  # Tree(2-4-5)
 print(t.right) # Tree(3-None-6)
 
 
-l = LinkedListNode.make_linked_list([1, 2, 3, 4, 5])
-print(type(l)) # <class 'leezy.assists.LinkedListNode'>
+l = ListNode.make_linked_list([1, 2, 3, 4, 5])
+print(type(l)) # <class 'leezy.assists.ListNode'>
 print(l)       # 1->2->3->4->5
 print(l.next)  # 2->3->4->5
 ```
@@ -303,7 +303,7 @@ print(l.next)  # 2->3->4->5
 现在支持的类型:
 
 - TreeNode
-- LinkedListNode
+- ListNode
 
 
 
