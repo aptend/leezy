@@ -163,8 +163,16 @@ class ProblemProvider:
         new['smilar_problems'] = json.loads(raw['similarQuestions'])
         new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
                                sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
-        new['sample_testcase'] = [json.loads(s) for s
-                                  in raw['sampleTestCase'].split('\n')]
+        # testcase of problem 191 is not valid json data
+        # actually, the testcase of 191 is confusing
+        # is it ok to abandon it?
+        cases = []
+        for case_row in raw['sampleTestCase'].split('\n'):
+            try:
+                cases.append(json.loads(case_row))
+            except json.JSONDecodeError:
+                pass
+        new['sample_testcase'] = cases
         return new
 
 
