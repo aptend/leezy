@@ -2,11 +2,25 @@ import json
 from collections import abc, defaultdict
 from functools import partial
 from pathlib import Path
+from types import SimpleNamespace
 
 from leezy.errors import ConfigError
 
 
 __all__ = ['config']
+
+
+CN_URLS = {
+    'portal': 'https://leetcode-cn.com',
+    "graphql": "https://leetcode-cn.com/graphql",
+    "api_problems": "https://leetcode-cn.com/api/problems/algorithms"
+}
+
+US_URLS = {
+    'portal': 'https://leetcode.com',
+    "graphql": "https://leetcode.com/graphql",
+    "api_problems": "https://leetcode.com/api/problems/algorithms"
+}
 
 DEFAULT = {
     "table": {
@@ -14,7 +28,8 @@ DEFAULT = {
         "max_content_length": 100
     },
     "core": {
-        "workdir": "."
+        "workdir": ".",
+        "zone": "cn"
     },
     "log": {
         "level": "INFO"
@@ -22,7 +37,7 @@ DEFAULT = {
 }
 
 
-CHECK_MAP = {
+CHECK_FUNCTIONS = {
     "table.max_col_width": int,
     "table.max_content_length": int
 }
@@ -87,10 +102,16 @@ class Config:
         self._write_down(self.data)
 
     def put(self, key, value):
-        check = CHECK_MAP.get(key, None)
-        if check:
+        """update config entry and persist the data"""
+        self._patch(key, value)
+        self._write_down(self.data)
+
+    def _patch(self, key, value):
+        """update config entry in memory"""
+        check_fn = CHECK_FUNCTIONS.get(key, None)
+        if check_fn:
             try:
-                check(value)
+                check_fn(value)
             except:
                 raise ConfigError(
                     f"config: {value!r} is not valid for {key!r}")
@@ -100,7 +121,6 @@ class Config:
             exec(put_expr)
         except (KeyError, TypeError):
             raise ConfigError(f"config: {key!r} is a invalid key")
-        self._write_down(self.data)
 
     def get_from_default(self, key):
         loc_expr = self._expand_loc_expr(key)
@@ -120,6 +140,8 @@ class Config:
             raise ConfigError(f"config: {key!r} is not found")
         get_value = locals()['value']
         if isinstance(get_value, defaultdict):
+            # if all key parts are valid identifiers but there is no item
+            # at the end postion, we will get an empty `defaultdict`
             if len(get_value) == 0:
                 return self.get_from_default(key)
             return dict(get_value)
@@ -138,3 +160,8 @@ class Config:
 
 
 config = Config()
+
+if config.get('core.zone') == 'cn':
+    config._patch('urls', CN_URLS)
+else:
+    config._patch('urls', US_URLS)
