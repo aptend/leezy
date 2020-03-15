@@ -23,11 +23,15 @@ class LeezyError(Exception):
     def __str__(self):
         display = f'A `{self.__class__.__name__}` occurred'
         if self.description:
-            display += ': ' + self.description + '\n'
+            display += '\n information: ' + self.description + '\n'
         if self.cause:
             display += 'caused by:\n'
             display += str(self.cause) + '\n'
         return display
+
+
+class LoginError(LeezyError):
+    pass
 
 
 class NetworkError(LeezyError):

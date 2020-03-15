@@ -4,46 +4,203 @@ import json
 import logging
 import tempfile
 from pathlib import Path
+from datetime import datetime
 
 import requests
 
 from leezy.render import Render
 from leezy.errors import *
 from leezy.config import config
+from leezy.utils import SecreteDialog
 
+
+LOG = logging.getLogger(__name__)
+Info = LOG.info
+Debug = LOG.debug
+Warn = LOG.warning
 
 ID_WIDTH = 3
 NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
-logger = logging.getLogger()
 
-QUERY = """query questionData($titleSlug: String!) {
-  question(titleSlug: $titleSlug) {
-    questionId
-    questionFrontendId
-    title
-    titleSlug
-    content
-    isPaidOnly
-    difficulty
-    likes
-    dislikes
-    similarQuestions
-    topicTags {
-      name
-      slug
-    }
-    companyTagStats
-    codeSnippets {
-      langSlug
-      code
-    }
-    stats
-    hints
-    status
-    sampleTestCase
-  }
-}
-"""
+
+class Payload:
+    def __init__(self):
+        self.operation = ""
+        self.variables = {}
+        self.query = ""
+
+    def set_variable(self, key, val):
+        self.variables[key] = val
+
+    def as_dict(self):
+        return {
+            'operationName': self.operation,
+            'variables': self.variables,
+            'query': self.query
+        }
+
+
+class LoginPayload(Payload):
+    def __init__(self):
+        self.operation = 'signInWithPassword'
+        self.variables = {
+            'data': {
+                'username': 'example',
+                'password': 'no-password'
+            }
+        }
+        self.query = """\
+        mutation signInWithPassword($data: AuthSignInWithPasswordInput!) {
+            authSignInWithPassword(data: $data) {
+                ok
+                __typename
+            }
+        }"""
+
+    def set_secret(self, username, password):
+        self.variables['data']['username'] = username
+        self.variables['data']['password'] = password
+        return self
+
+
+class ProblemQueryPayload(Payload):
+    def __init__(self):
+        self.operation = 'questionData'
+        self.variables = {
+            'titleSlug': 'some-problem'
+        }
+        self.query = """\
+        query questionData($titleSlug: String!) {
+            question(titleSlug: $titleSlug) {
+                questionId
+                questionFrontendId
+                title
+                titleSlug
+                content
+                isPaidOnly
+                difficulty
+                likes
+                dislikes
+                similarQuestions
+                topicTags {
+                    name
+                    slug
+                }
+                companyTagStats
+                codeSnippets {
+                    langSlug
+                    code
+                }
+                stats
+                hints
+                status
+                sampleTestCase
+            }
+        }"""
+
+    def set_slug_title(self, slug_title):
+        self.variables['titleSlug'] = slug_title
+        return self
+
+
+class NetAgent:
+    def __init__(self):
+        self.sess = requests.Session()
+        self.sess.headers.update({
+            'user-agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                           'AppleWebKit/537.36 (KHTML, like Gecko) '
+                           'Chrome/80.0.3987.132 Safari/537.36')
+        })
+
+    def get(self, url, purpose='', **kwargs):
+        self.ensure_login()
+        purpose = purpose or f'try to GET {url!r}'
+        return self._get(url, purpose=purpose, **kwargs)
+
+    def _get(self, url, purpose='', **kwargs):
+        description = purpose
+        try:
+            r = self.sess.get(url, **kwargs)
+        except requests.ConnectionError as err:
+            raise NetworkError(description, err)
+        raise_for_status(r, description)
+        return r
+
+    def post(self, url, purpose='', **kwargs):
+        self.ensure_login()
+        purpose = purpose or f'try to POST {url!r}'
+        return self._post(url, purpose=purpose, **kwargs)
+
+    def _post(self, url, purpose='', **kwargs):
+        description = purpose
+        try:
+            r = self.sess.post(url, **kwargs)
+        except requests.ConnectionError as err:
+            raise NetworkError(description, err)
+        raise_for_status(r, description)
+        return r
+
+    def _update_cookie(self, token):
+        self.sess.cookies.update({ 'LEETCODE_SESSION': token })
+
+    def ensure_login(self):
+        need_login = False
+        try:
+            token = config.get('session.token')
+            expires = config.get('session.expires')
+        except ConfigError:
+            need_login = True
+        else:
+            if datetime.timestamp(datetime.now()) > expires:
+                need_login = True
+
+        if need_login:
+            token = self.login()
+        self._update_cookie(token)
+
+    def login(self):
+        try:
+            username = config.get('user.name')
+            password = config.get('user.password')
+        except ConfigError:
+            dialog = SecreteDialog(f"Sign to {config.get('urls.portal')}")
+            username, password = dialog.collect()
+
+        token, expires = self._login(username, password)
+        Debug("Sign in successfully, persist the session token")
+        config.put('session.token', token)
+        config.put('session.expires', expires)
+        return token
+
+    def _login(self, username, password):
+        """try to login, returns (session_token, expires) if successfully
+        """
+        url_graphql = config.get('urls.graphql')
+        url_origin = config.get('urls.portal')
+        headers = {
+            'origin': url_origin,
+            'x-csrftoken': 'undefined',
+        }
+        headers.update(self.sess.headers)
+        login_payload = (LoginPayload()
+                         .set_secret(username, password)
+                         .as_dict())
+        Debug(f"try to sign in {url_origin} as {username!r}")
+        r = self._post(url_graphql, purpose="try to sign in LeetCode",
+                       headers=headers, json=login_payload)
+        if not r.json()['data']['authSignInWithPassword']['ok']:
+            raise LoginError("Wrong username or password?")
+
+        token = expires = None
+        for c in r.cookies:
+            if c.name == 'LEETCODE_SESSION':
+                token = c.value
+                expires = c.expires
+                break
+        else:
+            raise LoginError("login successfully, "
+                             "but didn't find session token in the response")
+        return (token, expires)
 
 
 class Entry:
@@ -55,11 +212,7 @@ class Entry:
 
 class ProblemEntryRepo:
     def __init__(self, cn=False):
-        if cn:
-            src_url = "https://leetcode-cn.com/api/problems/algorithms/"
-        else:
-            src_url = "https://leetcode.com/api/problems/algorithms/"
-        self.all_problem_url = src_url
+        self.net = NetAgent()
         path = str(Path(tempfile.gettempdir()) / "leezy_problems.json")
         self.problems_file = path
         self.problems = self._load_local_cache()
@@ -86,14 +239,10 @@ class ProblemEntryRepo:
         raw_problems = self._raw_web_all_problems()
         self.problems = self._flush_raw_all_problems(raw_problems)
         self.write_down_problems(self.problems)
- 
+
     def _raw_web_all_problems(self):
-        description = "can't fetch the list of problem entry"
-        try:
-            r = requests.get(self.all_problem_url)
-        except requests.ConnectionError as err:
-            raise NetworkError(description, err)
-        raise_for_status(r, description)
+        purpose = "fetch the list of problem entry"
+        r = self.net.get(config.get('urls.api_problems'), purpose=purpose)
         return r.json()
 
     def _flush_raw_all_problems(self, raw_json):
@@ -127,22 +276,11 @@ class ProblemProvider:
         detail = self._flush_raw_problem_detail(entry.title_slug, raw)
         return detail
 
-    def _query_payload(self, slug_title):
-        query = {
-            "operationName": "questionData",
-            "query": QUERY
-        }
-        query['variables'] = {'titleSlug': slug_title}
-        return query
-
     def _raw_problem_detail(self, slug_title):
-        payload = self._query_payload(slug_title)
-        description = f"cat't fetch problem {slug_title!r} detail"
-        try:
-            r = requests.post(self.grapql_url, json=payload)
-        except requests.ConnectionError as e:
-            raise NetworkError(description, e)
-        raise_for_status(r, description)
+        payload = ProblemQueryPayload().set_slug_title(slug_title).as_dict()
+        purpose = f"fetch problem {slug_title!r} detail"
+        post = self.entry_repo.net.post
+        r = post(config.get('urls.graphql'), purpose=purpose, json=payload)
         return r.json()
 
     def _flush_raw_problem_detail(self, slug_title, raw_json):
@@ -183,10 +321,10 @@ class Problem:
         self.id_ = str(id_).rjust(ID_WIDTH, '0')
         self.provider = provider or ProblemProvider()
 
-        basic_info = self.provider.info_by_id(id_)
-        self.title = NAME_BLACKLIST_RE.sub('', basic_info.title).strip()
-        self.slug_title = NAME_BLACKLIST_RE.sub('', basic_info.title_slug).strip()
-        self.difficulty = basic_info.difficulty
+        _info = self.provider.info_by_id(id_)
+        self.title = NAME_BLACKLIST_RE.sub('', _info.title).strip()
+        self.slug_title = NAME_BLACKLIST_RE.sub('', _info.title_slug).strip()
+        self.difficulty = _info.difficulty
         workdir = Path(config.get('core.workdir'))
         self.folder_path = workdir / Path(f'{self.id_} - {self.title}')
         self.html_path = self.folder_path / f'{self.id_}.html'
@@ -217,4 +355,5 @@ class Problem:
             self._lazy_init()
         self.folder_path.mkdir(parents=True, exist_ok=True)
         self.html_path.write_text(self.content, encoding='utf8')
-        self.py_path.write_text(self._generate_solution_tmpl(), encoding='utf8')
+        self.py_path.write_text(
+            self._generate_solution_tmpl(), encoding='utf8')
