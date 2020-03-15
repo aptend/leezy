@@ -1,3 +1,4 @@
+import logging
 import argparse
 import subprocess
 
@@ -60,7 +61,8 @@ def run(args):
 
 def handle_config(args):
     if args.list:
-        print('\n'.join('='.join((k, str(v))) for k, v in config.get_all()))
+        print('\n'.join('='.join((k, str(v)))
+                        for k, v in config.get_all_file_data()))
     elif args.add:
         config.put(args.add[0], args.add[1])
     elif args.unset:
@@ -99,6 +101,8 @@ args = parser.parse_args()
 if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
+    log_lv = getattr(logging, config.get('log.level').upper())
+    logging.basicConfig(level=log_lv)
     args.func(args)
 
 
