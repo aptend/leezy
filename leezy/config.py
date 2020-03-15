@@ -34,6 +34,10 @@ DEFAULT = {
     },
     "log": {
         "level": "INFO"
+    },
+    "timeout": {
+        "submit": 10,
+        "net": 5
     }
 }
 

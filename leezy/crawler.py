@@ -1,17 +1,20 @@
 import re
 import sys
 import json
+import time
 import logging
 import tempfile
 from pathlib import Path
+from textwrap import indent, shorten
 from datetime import datetime
+from types import SimpleNamespace
 
 import requests
 
 from leezy.render import Render
 from leezy.errors import *
 from leezy.config import config
-from leezy.utils import SecreteDialog
+from leezy.utils import SecreteDialog, YesNoDialog
 
 
 LOG = logging.getLogger(__name__)
@@ -106,7 +109,9 @@ class ProblemQueryPayload(Payload):
 class NetAgent:
     def __init__(self):
         self.sess = requests.Session()
+        url_origin = config.get('urls.portal')
         self.sess.headers.update({
+            'origin': url_origin,
             'user-agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                            'AppleWebKit/537.36 (KHTML, like Gecko) '
                            'Chrome/80.0.3987.132 Safari/537.36')
@@ -141,7 +146,7 @@ class NetAgent:
         return r
 
     def _update_cookie(self, token):
-        self.sess.cookies.update({ 'LEETCODE_SESSION': token })
+        self.sess.cookies.update({'LEETCODE_SESSION': token})
 
     def ensure_login(self):
         need_login = False
@@ -176,12 +181,9 @@ class NetAgent:
         """try to login, returns (session_token, expires) if successfully
         """
         url_graphql = config.get('urls.graphql')
-        url_origin = config.get('urls.portal')
         headers = {
-            'origin': url_origin,
             'x-csrftoken': 'undefined',
         }
-        headers.update(self.sess.headers)
         login_payload = (LoginPayload()
                          .set_secret(username, password)
                          .as_dict())
@@ -266,6 +268,7 @@ class ProblemProvider:
     def __init__(self):
         self.grapql_url = "https://leetcode.com/graphql"
         self.entry_repo = ProblemEntryRepo()
+        self.net = self.entry_repo.net
 
     def info_by_id(self, id_):
         return self.entry_repo.entry_by_id(id_)
@@ -357,3 +360,219 @@ class Problem:
         self.html_path.write_text(self.content, encoding='utf8')
         self.py_path.write_text(
             self._generate_solution_tmpl(), encoding='utf8')
+
+    def submit(self, n):
+        if not self.py_path.is_file():
+            raise LeezyError(f'File not found: {self.py_path}')
+        extractor = SolutionExtractor(self.py_path.read_text())
+        func, code = extractor.submission(n)
+        # change function name before submit
+        if len(extractor) > 1 and not self.frontend_id:
+            self._lazy_init()
+            origin_func_name = re.findall(
+                r'def\s+(\S+)\(', self.code_snippet)[0]
+            code = code.replace(func+'(', origin_func_name+'(')
+
+        prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
+        if not YesNoDialog(prelude).collect():
+            return
+        payload = {
+            "question_id": str(self.query_id),
+            "lang": "python3",
+            "typed_code": code,
+            "test_mode": False,
+            "test_judger": "",
+            "questionSlug": self.slug_title
+        }
+
+        portal = config.get('urls.portal')
+        # POST  https://leetcode-cn.com/problems/two-sum/submit/
+        submit_url = f"{portal}/problems/{self.slug_title}/submit/"
+
+        net = self.provider.net
+
+        r = net.post(submit_url, purpose="submit a solution", json=payload)
+
+        submission_id = r.json()['submission_id']
+        # GET https://leetcode-cn.com/submissions/detail/53947058/check/
+        check_url = f"{portal}/submissions/detail/{submission_id}/check/"
+
+        check_cnt = 0
+        r = None
+        while True:
+            time.sleep(1)
+            r = net.get(check_url, purpose='check submission x {check_cnt}')
+            if len(r.json()) > 1:
+                break
+
+        rjson = r.json()
+        if 'status_code' in rjson:
+            SubmissionReporter(rjson).report()
+        else:
+            raise LeezyError(f'Bad submission: {r.text}')
+
+
+class Reporter:
+    def __init__(self, data):
+        self.data = data
+
+    def summary(self):
+        print(f'--------{self.data.status_msg}!-------')
+
+    def explain(self):
+        data = self.data
+        print(f'passed cases: {data.total_correct}/{data.total_testcases}')
+
+    def report(self):
+        self.summary()
+        self.explain()
+
+
+class RuntimeErrorReporter(Reporter):
+    def explain(self):
+        print('\nerror:\n', self.data.runtime_error)
+        print('\ndetail:\n', self.data.full_runtime_error)
+
+
+class CompileErrorReporter(Reporter):
+    def explain(self):
+        print('\nerror:\n', self.data.complie_error)
+        print('\ndetail:\n', self.data.full_compile_error)
+
+
+class WrongAnswerReporter(Reporter):
+    def explain(self):
+        data = self.data
+        print('   passed cases: ',
+              f'{data.total_correct}/{data.total_testcases}')
+        print('  last testcase: ', shorten(data.input_formatted, 50))
+        print('    your output: ', shorten(data.code_output, 50))
+        print('expected output: ', shorten(data.expected_output, 50))
+        if len(data.input_formatted) < 50 and len(data.expected_output) < 50:
+            print('\nconsider to add the following line to your local test?')
+            print(f"q.add_case(q.case({data.input_formatted})"
+                  f".assert_equal({data.expected_output}))")
+
+
+class TLEReporter(Reporter):
+    def explain(self):
+        data = self.data
+        print('   passed cases: ',
+              f'{data.total_correct}/{data.total_testcases}')
+        print('  last testcase: ', shorten(data.input_formatted, 50))
+
+class AcceptedReporter(Reporter):
+    def explain(self):
+        data = self.data
+        print()
+
+class SubmissionReporter:
+    def __init__(self, data):
+        data = SimpleNamespace(**data)
+        stat_code = data.status_code
+        if stat_code == 15:
+            r = RuntimeErrorReporter(data)
+        elif stat_code == 20:
+            r = ComplieErrorReporter(data)
+        elif stat_code == 11:
+            r = WrongAnswerReporter(data)
+        elif stat_code == 10:
+            r = AcceptedReport(data)
+        self.reporter = r
+
+    def report(self):
+        self.reporter.report()
+
+
+class Liner:
+    def __init__(self, content):
+        self.lines = content.split('\n')
+        self.curidx = 0
+        self.N = len(self.lines)
+
+    def eat(self):
+        self.curidx += 1
+
+    def has_next(self):
+        return self.curidx < self.N
+
+    def peek(self):
+        return self.lines[self.curidx]
+
+    def indent(self):
+        i = 0
+        line = self.peek()
+        while i < len(line) and line[i] == ' ':
+            i += 1
+        return i
+
+    def peek_next(self, n):
+        nxt = self.curidx + n
+        if nxt >= self.N:
+            return ''
+        else:
+            return self.lines[nxt]
+
+
+class SolutionExtractor:
+    def __init__(self, content):
+        liner = Liner(content)
+        imports = []
+        solutions = []
+        helpers = []
+        while liner.has_next():
+            cur_line = liner.peek()
+            s_cur = cur_line.strip()
+            if s_cur.startswith('import ') or s_cur.startswith('from '):
+                if 'leezy' not in cur_line:
+                    imports.append(s_cur)
+                liner.eat()
+            elif '@solution' in liner.peek():
+                liner.eat()
+                solutions.append(self.get_function(liner))
+            elif 'def ' in liner.peek():
+                func, code = self.get_function(liner)
+                if func != 'main':
+                    helpers.append((func, code))
+            else:
+                liner.eat()
+
+        submits = []
+        for solution, code in solutions:
+            blocks = [code]
+            for helper, helper_code in helpers:
+                if helper in code:
+                    blocks.append(helper_code)
+            parts = imports[:]
+            parts.append("\nclass Solution:")
+            parts.extend(indent(block, '    ') + '\n' for block in blocks)
+            submits.append((solution, '\n'.join(parts)))
+
+        self.submits = submits
+
+    def submission(self, n):
+        if n <= 0:
+            raise LeezyError('Solution index starts with 1')
+        N = len(self.submits)
+        be = 'are' if N > 1 else 'is'
+        plural = 's' if N > 1 else ''
+        if n > N:
+            raise LeezyError(f'There {be} only {N} solution{plural}')
+        return self.submits[n-1]
+
+    def __len__(self):
+        return len(self.submits)
+
+    def __iter__(self):
+        yield from self.submits
+
+    def get_function(self, liner):
+        indent = liner.indent()
+        claim = liner.peek()[indent:]
+        func_name = re.findall(r'def\s+(\S+)\(', claim)[0]
+        codes = [claim]
+        liner.eat()
+        while liner.has_next() and liner.indent() > indent:
+            codes.append(liner.peek()[indent:])
+            liner.eat()
+        return (func_name, '\n'.join(codes))

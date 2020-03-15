@@ -58,6 +58,15 @@ def run(args):
         except Exception:
             raise
 
+def submit(args):
+    parts = args.solution.split('@')
+    sol_id, id_ = int(parts[0]), int(parts[1])
+    try:
+        Problem(id_).submit(sol_id)
+    except LeezyError as e:
+        show_error_and_exit(e)
+    except Exception as e:
+        print(f'Uncaught Exception: {e!r}')
 
 def handle_config(args):
     if args.list:
@@ -79,6 +88,10 @@ subs = parser.add_subparsers(
 run_parser = subs.add_parser('run', help='运行题解')
 run_parser.add_argument('id', type=int, help="题目编号")
 run_parser.set_defaults(func=run)
+
+submit_parser = subs.add_parser('submit', help='提交题解')
+submit_parser.add_argument('solution', help="题解编号，1@1，第一题的题解1")
+submit_parser.set_defaults(func=submit)
 
 pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
 pull_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")

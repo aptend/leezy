@@ -2,8 +2,6 @@ from itertools import zip_longest
 from textwrap import wrap, shorten
 from getpass import getuser, getpass
 
-class Dialoger:
-    pass
 
 class SecreteDialog:
     def __init__(self, prelude):
@@ -15,6 +13,20 @@ class SecreteDialog:
         password = getpass("> password: ")
         return username, password
 
+class YesNoDialog:
+    def __init__(self, prelude):
+        self.prelude = prelude
+    
+    def collect(self):
+        print(self.prelude)
+        while True:
+            answer = input("> [Yes/No]?")
+            if answer.upper() in ['Y', 'YES', 'YEAH']:
+                return True
+            elif answer.upper() in ['N', 'No']:
+                return False
+            else:
+                print(f'< what does {answer!r} mean?')
 
 class Table:
     """ Table format tool
