@@ -13,8 +13,8 @@ import requests
 
 from leezy.render import Render
 from leezy.errors import *
-from leezy.config import config, Urls
 from leezy.utils import SecreteDialog, YesNoDialog
+from leezy.config import config, session_token, Urls
 
 
 LOG = logging.getLogger(__name__)
@@ -144,23 +144,11 @@ class NetAgent:
         raise_for_status(r, description)
         return r
 
-    def _update_cookie(self, token):
-        self.sess.cookies.update({'LEETCODE_SESSION': token})
-
     def ensure_login(self):
-        need_login = False
-        try:
-            token = config.get('session.token')
-            expires = config.get('session.expires')
-        except ConfigError:
-            need_login = True
-        else:
-            if datetime.timestamp(datetime.now()) > expires:
-                need_login = True
-
-        if need_login:
-            token = self.login()
-        self._update_cookie(token)
+        if not session_token.is_existed() or session_token.is_expired():
+            # login() will update session_token
+            self.login()
+        self.sess.cookies.update(session_token.get_token())
 
     def login(self):
         try:
@@ -172,22 +160,20 @@ class NetAgent:
 
         token, expires = self._login(username, password)
         Debug("Sign in successfully, persist the session token")
-        config.put('session.token', token)
-        config.put('session.expires', expires)
-        return token
+        session_token.store_token(token, expires)
 
     def _login(self, username, password):
         """try to login, returns (session_token, expires) if successfully
         """
-        headers = {
-            'x-csrftoken': 'undefined',
-        }
-        login_payload = (LoginPayload()
-                         .set_secret(username, password)
-                         .as_dict())
+        # headers = { 'x-csrftoken': 'undefined' }
+
         Debug(f"try to sign in {Urls.portal()} as {username!r}")
-        r = self._post(Urls.graphql(), purpose="try to sign in LeetCode",
-                       headers=headers, json=login_payload)
+        # leetcode-cn.com
+        payload = (LoginPayload().set_secret(username, password).as_dict())
+        r = self._post(Urls.graphql(),
+                       purpose="try to sign in LeetCode",
+                       json=payload)
+
         if not r.json()['data']['authSignInWithPassword']['ok']:
             raise LoginError("Wrong username or password?")
 

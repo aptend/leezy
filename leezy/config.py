@@ -1,8 +1,9 @@
 import json
 import logging
-from collections import abc, defaultdict
-from functools import partial
 from pathlib import Path
+from collections import abc
+from functools import partial
+from datetime import datetime
 from types import SimpleNamespace
 
 from leezy.errors import ConfigError
@@ -18,7 +19,7 @@ DEFAULT = {
     },
     "core": {
         "workdir": ".",
-        "zone": "cn"
+        "zone": "us"
     },
     "log": {
         "level": "INFO"
@@ -169,6 +170,37 @@ class Config:
         return deleted
 
 
+class SessionToken:
+    def __init__(self, config):
+        self.token = None
+        self.expires = None
+        self.config = config
+        if config.get('core.zone') == 'cn':
+            self.token_path = 'session.cn.token'
+            self.expires_path = 'session.cn.expires'
+        else:
+            self.token_path = 'session.us.token'
+            self.expires_path = 'session.us.expires'
+        try:
+            self.token = config.get(self.token_path)
+            self.expires = config.get(self.expires_path)
+        except ConfigError:
+            pass
+
+    def is_existed(self):
+        return self.expires is not None and self.token is not None
+
+    def is_expired(self):
+        return datetime.timestamp(datetime.now()) > self.expires
+
+    def get_token(self):
+        return {'LEETCODE_SESSION': self.token}
+
+    def store_token(self, token, expires):
+        self.config.put(self.token_path, token)
+        self.config.put(self.expires_path, expires)
+
+
 class Urls:
     PORTAL = None
 
@@ -213,4 +245,5 @@ class Urls:
 
 
 config = Config()
+session_token = SessionToken(config)
 Urls.init(config.get('core.zone'))
