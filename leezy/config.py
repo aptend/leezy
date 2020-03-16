@@ -11,18 +11,6 @@ from leezy.errors import ConfigError
 __all__ = ['config']
 
 
-CN_URLS = {
-    'portal': 'https://leetcode-cn.com',
-    "graphql": "https://leetcode-cn.com/graphql",
-    "api_problems": "https://leetcode-cn.com/api/problems/algorithms"
-}
-
-US_URLS = {
-    'portal': 'https://leetcode.com',
-    "graphql": "https://leetcode.com/graphql",
-    "api_problems": "https://leetcode.com/api/problems/algorithms"
-}
-
 DEFAULT = {
     "table": {
         "max_col_width": 30,
@@ -181,10 +169,48 @@ class Config:
         return deleted
 
 
+class Urls:
+    PORTAL = None
+
+    @classmethod
+    def init(cls, zone):
+        if zone == 'cn':
+            cls.PORTAL = 'https://leetcode-cn.com'
+        else:
+            cls.PORTAL = 'https://leetcode.com'
+
+    @staticmethod
+    def portal():
+        return Urls.PORTAL
+
+    @staticmethod
+    def graphql():
+        return f"{Urls.PORTAL}/graphql"
+
+    @staticmethod
+    def api_problems():
+        return f"{Urls.PORTAL}/api/problems/algorithms"
+
+    @staticmethod
+    def submit(slug_title):
+        # POST  https://leetcode-cn.com/problems/two-sum/submit/
+        return f"{Urls.PORTAL}/problems/{slug_title}/submit/"
+
+    @staticmethod
+    def submission_detail(sub_id):
+        # GET https://leetcode-cn.com/submissions/detail/53947058/
+        return f"{Urls.PORTAL}/submissions/detail/{sub_id}"
+
+    @staticmethod
+    def submission_check(sub_id):
+        # GET https://leetcode-cn.com/submissions/detail/53947058/check/
+        return f"{Urls.PORTAL}/submissions/detail/{sub_id}/check/"
+
+    @staticmethod
+    def dicussion(slug_title):
+        # you may don't want to see discussion in cn for now
+        return f"https://leetcode.com/problems/{slug_title}/discuss/"
+
 
 config = Config()
-
-if config.get('core.zone') == 'cn':
-    config.patch('urls', CN_URLS)
-else:
-    config.patch('urls', US_URLS)
+Urls.init(config.get('core.zone'))

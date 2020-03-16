@@ -13,7 +13,7 @@ import requests
 
 from leezy.render import Render
 from leezy.errors import *
-from leezy.config import config
+from leezy.config import config, Urls
 from leezy.utils import SecreteDialog, YesNoDialog
 
 
@@ -109,9 +109,8 @@ class ProblemQueryPayload(Payload):
 class NetAgent:
     def __init__(self):
         self.sess = requests.Session()
-        url_origin = config.get('urls.portal')
         self.sess.headers.update({
-            'origin': url_origin,
+            'origin': Urls.portal(),
             'user-agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                            'AppleWebKit/537.36 (KHTML, like Gecko) '
                            'Chrome/80.0.3987.132 Safari/537.36')
@@ -168,7 +167,7 @@ class NetAgent:
             username = config.get('user.name')
             password = config.get('user.password')
         except ConfigError:
-            dialog = SecreteDialog(f"Sign to {config.get('urls.portal')}")
+            dialog = SecreteDialog(f"Sign to {Urls.portal()}")
             username, password = dialog.collect()
 
         token, expires = self._login(username, password)
@@ -180,15 +179,14 @@ class NetAgent:
     def _login(self, username, password):
         """try to login, returns (session_token, expires) if successfully
         """
-        url_graphql = config.get('urls.graphql')
         headers = {
             'x-csrftoken': 'undefined',
         }
         login_payload = (LoginPayload()
                          .set_secret(username, password)
                          .as_dict())
-        Debug(f"try to sign in {url_origin} as {username!r}")
-        r = self._post(url_graphql, purpose="try to sign in LeetCode",
+        Debug(f"try to sign in {Urls.portal()} as {username!r}")
+        r = self._post(Urls.graphql(), purpose="try to sign in LeetCode",
                        headers=headers, json=login_payload)
         if not r.json()['data']['authSignInWithPassword']['ok']:
             raise LoginError("Wrong username or password?")
@@ -244,7 +242,7 @@ class ProblemEntryRepo:
 
     def _raw_web_all_problems(self):
         purpose = "fetch the list of problem entry"
-        r = self.net.get(config.get('urls.api_problems'), purpose=purpose)
+        r = self.net.get(Urls.api_problems(), purpose=purpose)
         return r.json()
 
     def _flush_raw_all_problems(self, raw_json):
@@ -283,7 +281,7 @@ class ProblemProvider:
         payload = ProblemQueryPayload().set_slug_title(slug_title).as_dict()
         purpose = f"fetch problem {slug_title!r} detail"
         post = self.entry_repo.net.post
-        r = post(config.get('urls.graphql'), purpose=purpose, json=payload)
+        r = post(Urls.graphql(), purpose=purpose, json=payload)
         return r.json()
 
     def _flush_raw_problem_detail(self, slug_title, raw_json):
@@ -376,6 +374,7 @@ class Problem:
         prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
         if not YesNoDialog(prelude).collect():
             return
+
         payload = {
             "question_id": str(self.query_id),
             "lang": "python3",
@@ -385,28 +384,29 @@ class Problem:
             "questionSlug": self.slug_title
         }
 
-        portal = config.get('urls.portal')
-        # POST  https://leetcode-cn.com/problems/two-sum/submit/
-        submit_url = f"{portal}/problems/{self.slug_title}/submit/"
-
         net = self.provider.net
-
-        r = net.post(submit_url, purpose="submit a solution", json=payload)
+        r = net.post(Urls.submit(self.slug_title),
+                     purpose="submit a solution",
+                     json=payload)
 
         submission_id = r.json()['submission_id']
-        # GET https://leetcode-cn.com/submissions/detail/53947058/check/
-        check_url = f"{portal}/submissions/detail/{submission_id}/check/"
+        check_url = Urls.submission_check(submission_id)
 
         check_cnt = 0
         r = None
         while True:
             time.sleep(1)
-            r = net.get(check_url, purpose='check submission x {check_cnt}')
+            r = net.get(check_url, purpose=f'check submission x {check_cnt}')
             if len(r.json()) > 1:
                 break
 
         rjson = r.json()
         if 'status_code' in rjson:
+            # append more infomation
+            rjson.update({
+                'discuss_url': Urls.dicussion(self.slug_title),
+                'submission_detail': Urls.submission_detail(submission_id),
+            })
             SubmissionReporter(rjson).report()
         else:
             raise LeezyError(f'Bad submission: {r.text}')
@@ -461,10 +461,19 @@ class TLEReporter(Reporter):
               f'{data.total_correct}/{data.total_testcases}')
         print('  last testcase: ', shorten(data.input_formatted, 50))
 
+
 class AcceptedReporter(Reporter):
     def explain(self):
         data = self.data
-        print()
+        print('  time used & rank:',
+              f'{data.status_runtime} faster than {data.runtime_percentile:.2f}%')
+        print('memory used & rank:',
+              f'{data.status_memory} less than {data.memory_percentile:.2f}%')
+
+        print('more helpful links:')
+        links = '\n'.join([data.submission_detail, data.discuss_url])
+        print(indent(links, '    '))
+
 
 class SubmissionReporter:
     def __init__(self, data):
@@ -473,11 +482,11 @@ class SubmissionReporter:
         if stat_code == 15:
             r = RuntimeErrorReporter(data)
         elif stat_code == 20:
-            r = ComplieErrorReporter(data)
+            r = CompileErrorReporter(data)
         elif stat_code == 11:
             r = WrongAnswerReporter(data)
         elif stat_code == 10:
-            r = AcceptedReport(data)
+            r = AcceptedReporter(data)
         self.reporter = r
 
     def report(self):
