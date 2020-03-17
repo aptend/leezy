@@ -58,5 +58,6 @@ class NotFound(LeezyError):
 class Locked(LeezyError):
     pass
 
+
 class ConfigError(LeezyError):
     pass

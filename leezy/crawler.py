@@ -522,9 +522,13 @@ class SubmissionReporter:
         reporter_map = {
             10: AcceptedReporter,
             11: WrongAnswerReporter,
+            14: TLEReporter,
             15: RuntimeErrorReporter,
             20: CompileErrorReporter
         }
+        if stat_code not in reporter_map:
+            raise LeezyError(f"unkown report type: \n {data!r}")
+
         r = reporter_map[stat_code](data)
         self.reporter = r
 
