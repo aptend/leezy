@@ -7,6 +7,18 @@ from leezy.config import config
 
 from leezy.errors import show_error_and_exit, LeezyError
 
+import traceback
+
+LOG = logging.getLogger(__name__)
+Info = LOG.info
+Debug = LOG.debug
+Warn = LOG.warning
+
+
+def show_uncaught_exc(e):
+    print(f'Uncaught Exception: {e!r}')
+    Debug(traceback.format_exc(limit=10))
+
 
 def pull(args):
     for pid in expand_ids(args.ids):
@@ -15,7 +27,7 @@ def pull(args):
         except LeezyError as e:
             show_error_and_exit(e)
         except Exception as e:
-            print(f'Uncaught Exception: {e!r}')
+            show_uncaught_exc(e)
 
 
 def expand_ids(ids_arg):
@@ -33,7 +45,7 @@ def show(args):
         except LeezyError as e:
             show_error_and_exit(e)
         except Exception as e:
-            print(f'Uncaught Exception: {e!r}')
+            show_uncaught_exc(e)
 
 
 def run(args):
@@ -42,7 +54,7 @@ def run(args):
     except LeezyError as e:
         show_error_and_exit(e)
     except Exception as e:
-        print(f'Uncaught Exception: {e!r}')
+        show_uncaught_exc(e)
 
     if not py_path.is_file():
         print(f'File not found: {py_path}')
@@ -58,6 +70,7 @@ def run(args):
         except Exception:
             raise
 
+
 def submit(args):
     parts = args.solution.split('@')
     sol_id, id_ = int(parts[0]), int(parts[1])
@@ -66,7 +79,8 @@ def submit(args):
     except LeezyError as e:
         show_error_and_exit(e)
     except Exception as e:
-        print(f'Uncaught Exception: {e!r}')
+        show_uncaught_exc(e)
+
 
 def handle_config(args):
     if args.list:

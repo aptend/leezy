@@ -1,6 +1,13 @@
 
 import sys
+import logging
 import requests
+
+
+LOG = logging.getLogger(__name__)
+Info = LOG.info
+Debug = LOG.debug
+Warn = LOG.warning
 
 
 def show_error_and_exit(err):
@@ -12,6 +19,8 @@ def raise_for_status(response, description):
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
+        Debug(response.text)
+        Debug(response.request.headers)
         raise FetchError(description, e)
 
 
