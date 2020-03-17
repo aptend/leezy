@@ -142,7 +142,7 @@ class NetAgent:
         # add 'x-csrftoken' into POST headers
         csrf = self.sess.cookies.get('csrftoken', None)
         headers = {'x-csrftoken': csrf} if csrf else {}
-        if headers in kwargs:
+        if 'headers' in kwargs:
             kwargs['headers'].update(headers)
         else:
             kwargs['headers'] = headers
