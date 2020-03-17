@@ -1,9 +1,12 @@
+import re
 from itertools import zip_longest
 from textwrap import wrap, shorten
 from getpass import getuser, getpass
+from datetime import datetime
+from leezy.errors import ConfigError
 
 
-class SecreteDialog:
+class SecretDialog:
     def __init__(self, prelude):
         self.prelude = prelude
 
@@ -13,10 +16,11 @@ class SecreteDialog:
         password = getpass("> password: ")
         return username, password
 
+
 class YesNoDialog:
     def __init__(self, prelude):
         self.prelude = prelude
-    
+
     def collect(self):
         print(self.prelude)
         while True:
@@ -27,6 +31,46 @@ class YesNoDialog:
                 return False
             else:
                 print(f'< what does {answer!r} mean?')
+
+
+class SessionTokenDialog:
+    def collect(self):
+        token = input('> LEETCODE_SESSION token: ')
+        print('\n you can set expires using following format:\n',
+              '    1.absolute timestamp\n',
+              '    2.absolute date like 2020-03-31T00:39:14.945Z\n',
+              "    3.relative date like '10s', '11h', '12d'")
+        expires = input("> expires: ")
+
+        match = re.findall(r'^(\d+)([dhms]?)$', expires)
+        if match:
+            num, ty = match[0]
+            now_ts = datetime.timestamp(datetime.now())
+            num = int(num)
+            if ty == '':
+                if num <= now_ts:
+                    raise ConfigError('Expires is too old')
+                expires = num
+            elif ty == 'd':
+                expires = now_ts + num * 3600 * 24
+            elif ty == 'h':
+                expires = now_ts + num * 60 * 60
+            elif ty == 'm':
+                expires = now_ts + num * 60
+            elif ty == 's':
+                expires = now_ts + num
+        else:
+            try:
+                expires = datetime.strptime(expires, '%Y-%m-%dT%H:%M:%S.%fZ')\
+                                  .timestamp()
+            except ValueError:
+                raise ConfigError('Unrecognized expires formt')
+        return (token, int(expires))
+
+
+if __name__ == "__main__":
+    print(SessionTokenDialog().collect())
+
 
 class Table:
     """ Table format tool
@@ -46,6 +90,7 @@ class Table:
         max_col_width: int, max column width
         max_content_width: int, exceeded content will be shortened
     """
+
     def __init__(self, **kwargs):
         self.__rows = [None]
         self.col_n = 0

@@ -13,7 +13,7 @@ import requests
 
 from leezy.render import Render
 from leezy.errors import *
-from leezy.utils import SecreteDialog, YesNoDialog
+from leezy.utils import SecretDialog, YesNoDialog, SessionTokenDialog
 from leezy.config import config, session_token, Urls
 
 
@@ -24,6 +24,23 @@ Warn = LOG.warning
 
 ID_WIDTH = 3
 NAME_BLACKLIST_RE = re.compile(r'[\\/:.?<>|]')
+
+# this is awesome
+GUIDE = """
+x  x  | Elements | ... | Memory | > Application < | Security | ...
+-----------------------------------------------------------------------------
+Application                  | Name | Value | Domain | Path | Expires | ... |
+  ...                        |  ..
+Storage                      |  ..
+  ...                        | LEETCODE_SESSION | ⭐ | .leetcode.com | / | ⭐
+  IndexedDB                  |  ..
+  Web SQL                    |  ..
+  Cookies                    |  ..
+   > https://leetcode.com <  |  ..
+Cache                        |  ..
+   ...                       |  ..
+-----------------------------------------------------------------------------
+"""
 
 
 class Payload:
@@ -162,30 +179,53 @@ class NetAgent:
     def ensure_login(self):
         if not session_token.is_existed() or session_token.is_expired():
             # login() will update session_token
-            self.login()
+            Login(self, config.get('core.zone')).login()
         self.sess.cookies.update(session_token.get_token())
 
-    def login(self):
+
+class Login:
+    def __init__(self, net, zone):
+        self.net = net
+        if zone == 'cn':
+            self.login = self.cn_login
+        elif zone == 'us':
+            self.login = self.us_login
+        else:
+            raise ConfigError(f'Unrecognized zone {zone!r}')
+
+    def cn_login(self):
+        username, password = self._collect_secret()
+        token, expires = self._cn_login_by_secret(username, password)
+        session_token.store_token(token, expires)
+
+    def us_login(self):
+        Warn('Leetcode.com enables Recaptcha verification now.\n'
+             'We can\'t sign you in easily anymore. \n'
+             'You have to sign in leetcode.com first and then '
+             'find LEETCODE_SESSION in the debug panel of browser\n'
+             'Chrome: F12 and follow the guide of the graph:\n' + GUIDE)
+        token, expires = self._login_by_bare_hand()
+        session_token.store_token(token, expires)
+
+    def _login_by_bare_hand(self):
+        return SessionTokenDialog().collect()
+
+    def _collect_secret(self):
         try:
             username = config.get('user.name')
             password = config.get('user.password')
         except ConfigError:
-            dialog = SecreteDialog(f"Sign to {Urls.portal()}")
+            dialog = SecretDialog(f"Sign to {Urls.portal()}")
             username, password = dialog.collect()
+        return (username, password)
 
-        token, expires = self._login(username, password)
-        Debug("Sign in successfully, persist the session token")
-        session_token.store_token(token, expires)
-
-    def _login(self, username, password):
-        """try to login, returns (session_token, expires) if successfully
-        """
+    def _cn_login_by_secret(self, username, password):
         Debug(f"try to sign in {Urls.portal()} as {username!r}")
         # leetcode-cn.com
         payload = (LoginPayload().set_secret(username, password).as_dict())
-        r = self._post(Urls.graphql(),
-                       purpose="try to sign in LeetCode",
-                       json=payload)
+        r = self.net._post(Urls.graphql(),
+                           purpose="try to sign in LeetCode",
+                           json=payload)
 
         if not r.json()['data']['authSignInWithPassword']['ok']:
             raise LoginError("Wrong username or password?")

@@ -176,14 +176,17 @@ class SessionToken:
         self.expires = None
         self.csrf = None
         self.config = config
-        if config.get('core.zone') == 'cn':
+        zone = config.get('core.zone')
+        if zone == 'cn':
             self.token_path = 'session.cn.token'
             self.expires_path = 'session.cn.expires'
             self.csrf_path = 'session.cn.csrf'
-        else:
+        elif zone == 'us':
             self.token_path = 'session.us.token'
             self.expires_path = 'session.us.expires'
             self.csrf_path = 'session.us.csrf'
+        else:
+            raise ConfigError(f'Unrecognized zone {zone!r}')
         try:
             self.token = config.get(self.token_path)
             self.expires = config.get(self.expires_path)
@@ -225,8 +228,10 @@ class Urls:
     def init(cls, zone):
         if zone == 'cn':
             cls.PORTAL = 'https://leetcode-cn.com'
-        else:
+        elif zone == 'us':
             cls.PORTAL = 'https://leetcode.com'
+        else:
+            raise ConfigError(f'Unrecognized zone {zone!r}')
 
     @staticmethod
     def portal():
