@@ -239,11 +239,15 @@ class Urls:
 
     @staticmethod
     def graphql():
-        return f"{Urls.PORTAL}/graphql"
+        return f"{Urls.PORTAL}/graphql/"
 
     @staticmethod
-    def api_problems():
-        return f"{Urls.PORTAL}/api/problems/algorithms"
+    def api_problems_algo():
+        return f"{Urls.PORTAL}/api/problems/algorithms/"
+
+    @staticmethod
+    def api_problems_all():
+        return f"{Urls.PORTAL}/api/problems/all/"
 
     @staticmethod
     def problem_home(slug_title):

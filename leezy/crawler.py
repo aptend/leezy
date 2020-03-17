@@ -123,7 +123,7 @@ class ProblemQueryPayload(Payload):
         return self
 
 
-class NetAgent:
+class Net:
     def __init__(self):
         self.sess = requests.Session()
         self.sess.headers.update({
@@ -251,7 +251,7 @@ class Entry:
 
 class ProblemEntryRepo:
     def __init__(self, cn=False):
-        self.net = NetAgent()
+        self.net = Net()
         path = str(Path(tempfile.gettempdir()) / "leezy_problems.json")
         self.problems_file = path
         self.problems = self._load_local_cache()
@@ -281,7 +281,7 @@ class ProblemEntryRepo:
 
     def _raw_web_all_problems(self):
         purpose = "fetch the list of problem entry"
-        r = self.net.get(Urls.api_problems(), purpose=purpose)
+        r = self.net.get(Urls.api_problems_algo(), purpose=purpose)
         return r.json()
 
     def _flush_raw_all_problems(self, raw_json):

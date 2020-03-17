@@ -82,6 +82,11 @@ def submit(args):
         show_uncaught_exc(e)
 
 
+def plot(args):
+    from leezy.plot import SNSPlotter, DataFeeder
+    SNSPlotter(DataFeeder()).plot()
+
+
 def handle_config(args):
     if args.list:
         print('\n'.join('='.join((k, str(v)))
@@ -102,6 +107,9 @@ subs = parser.add_subparsers(
 run_parser = subs.add_parser('run', help='运行题解')
 run_parser.add_argument('id', type=int, help="题目编号")
 run_parser.set_defaults(func=run)
+
+plot_parser = subs.add_parser('plot', help='画个AC热点图')
+plot_parser.set_defaults(func=plot)
 
 submit_parser = subs.add_parser('submit', help='提交题解')
 submit_parser.add_argument('solution', help="题解编号，1@1，第一题的题解1")
