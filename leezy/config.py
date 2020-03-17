@@ -19,7 +19,7 @@ DEFAULT = {
     },
     "core": {
         "workdir": ".",
-        "zone": "us"
+        "zone": "cn"
     },
     "log": {
         "level": "INFO"
@@ -174,16 +174,20 @@ class SessionToken:
     def __init__(self, config):
         self.token = None
         self.expires = None
+        self.csrf = None
         self.config = config
         if config.get('core.zone') == 'cn':
             self.token_path = 'session.cn.token'
             self.expires_path = 'session.cn.expires'
+            self.csrf_path = 'session.cn.csrf'
         else:
             self.token_path = 'session.us.token'
             self.expires_path = 'session.us.expires'
+            self.csrf_path = 'session.us.csrf'
         try:
             self.token = config.get(self.token_path)
             self.expires = config.get(self.expires_path)
+            self.csrf = config.get(self.csrf_path)
         except ConfigError:
             pass
 
@@ -194,11 +198,24 @@ class SessionToken:
         return datetime.timestamp(datetime.now()) > self.expires
 
     def get_token(self):
-        return {'LEETCODE_SESSION': self.token}
+        return {'LEETCODE_SESSION': self.token} if self.token else {}
+
+    def get_csrf(self):
+        return {'csrftoken': self.csrf} if self.csrf else {}
 
     def store_token(self, token, expires):
         self.config.put(self.token_path, token)
         self.config.put(self.expires_path, expires)
+
+    def try_update_csrf(self, r):
+        if 'csrftoken' in r.cookies:
+            self.store_csrf(r.cookies['csrftoken'])
+
+    def store_csrf(self, csrf):
+        # actually, csrftoken's life time is very long
+        # it may be more efficient to lower the frequency of updating
+        if csrf != self.csrf:
+            self.config.put(self.csrf_path, csrf)
 
 
 class Urls:
@@ -224,7 +241,16 @@ class Urls:
         return f"{Urls.PORTAL}/api/problems/algorithms"
 
     @staticmethod
-    def submit(slug_title):
+    def problem_home(slug_title):
+        return f"{Urls.PORTAL}/problems/{slug_title}/"
+
+    @staticmethod
+    def problem_discussion(slug_title):
+        # you may don't want to see discussion in cn for now
+        return f"https://leetcode.com/problems/{slug_title}/discuss/"
+
+    @staticmethod
+    def problem_submit(slug_title):
         # POST  https://leetcode-cn.com/problems/two-sum/submit/
         return f"{Urls.PORTAL}/problems/{slug_title}/submit/"
 
@@ -237,11 +263,6 @@ class Urls:
     def submission_check(sub_id):
         # GET https://leetcode-cn.com/submissions/detail/53947058/check/
         return f"{Urls.PORTAL}/submissions/detail/{sub_id}/check/"
-
-    @staticmethod
-    def dicussion(slug_title):
-        # you may don't want to see discussion in cn for now
-        return f"https://leetcode.com/problems/{slug_title}/discuss/"
 
 
 config = Config()

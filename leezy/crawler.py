@@ -115,6 +115,9 @@ class NetAgent:
                            'AppleWebKit/537.36 (KHTML, like Gecko) '
                            'Chrome/80.0.3987.132 Safari/537.36')
         })
+        # init csrf once using last local storage
+        # `session` will hanlde the upating of csrf caused by multiple requests
+        self.sess.cookies.update(session_token.get_csrf())
 
     def get(self, url, purpose='', **kwargs):
         self.ensure_login()
@@ -127,12 +130,23 @@ class NetAgent:
             r = self.sess.get(url, **kwargs)
         except requests.ConnectionError as err:
             raise NetworkError(description, err)
+        # try to record csrf if there is any
+        session_token.try_update_csrf(r)
         raise_for_status(r, description)
         return r
 
     def post(self, url, purpose='', **kwargs):
         self.ensure_login()
         purpose = purpose or f'try to POST {url!r}'
+
+        # add 'x-csrftoken' into POST headers
+        csrf = self.sess.cookies.get('csrftoken', None)
+        headers = {'x-csrftoken': csrf} if csrf else {}
+        if headers in kwargs:
+            kwargs['headers'].update(headers)
+        else:
+            kwargs['headers'] = headers
+
         return self._post(url, purpose=purpose, **kwargs)
 
     def _post(self, url, purpose='', **kwargs):
@@ -141,6 +155,7 @@ class NetAgent:
             r = self.sess.post(url, **kwargs)
         except requests.ConnectionError as err:
             raise NetworkError(description, err)
+        session_token.try_update_csrf(r)
         raise_for_status(r, description)
         return r
 
@@ -165,8 +180,6 @@ class NetAgent:
     def _login(self, username, password):
         """try to login, returns (session_token, expires) if successfully
         """
-        # headers = { 'x-csrftoken': 'undefined' }
-
         Debug(f"try to sign in {Urls.portal()} as {username!r}")
         # leetcode-cn.com
         payload = (LoginPayload().set_secret(username, password).as_dict())
@@ -357,9 +370,9 @@ class Problem:
                 r'def\s+(\S+)\(', self.code_snippet)[0]
             code = code.replace(func+'(', origin_func_name+'(')
 
-        prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
-        if not YesNoDialog(prelude).collect():
-            return
+        # prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
+        # if not YesNoDialog(prelude).collect():
+        #     return
 
         payload = {
             "question_id": str(self.query_id),
@@ -371,10 +384,11 @@ class Problem:
         }
 
         net = self.provider.net
-        r = net.post(Urls.submit(self.slug_title),
+        headers = {"referer": Urls.problem_home(self.slug_title)}
+        r = net.post(Urls.problem_submit(self.slug_title),
                      purpose="submit a solution",
-                     json=payload)
-
+                     json=payload,
+                     headers=headers)
         submission_id = r.json()['submission_id']
         check_url = Urls.submission_check(submission_id)
 
@@ -390,7 +404,7 @@ class Problem:
         if 'status_code' in rjson:
             # append more infomation
             rjson.update({
-                'discuss_url': Urls.dicussion(self.slug_title),
+                'discuss_url': Urls.problem_discussion(self.slug_title),
                 'submission_detail': Urls.submission_detail(submission_id),
             })
             SubmissionReporter(rjson).report()
@@ -403,7 +417,7 @@ class Reporter:
         self.data = data
 
     def summary(self):
-        print(f'--------{self.data.status_msg}!-------')
+        print(f'----------------{self.data.status_msg}!----------------')
 
     def explain(self):
         data = self.data
@@ -456,7 +470,7 @@ class AcceptedReporter(Reporter):
         print('memory used & rank:',
               f'{data.status_memory} less than {data.memory_percentile:.2f}%')
 
-        print('more helpful links:')
+        print('\nmore helpful links:')
         links = '\n'.join([data.submission_detail, data.discuss_url])
         print(indent(links, '    '))
 
@@ -465,14 +479,13 @@ class SubmissionReporter:
     def __init__(self, data):
         data = SimpleNamespace(**data)
         stat_code = data.status_code
-        if stat_code == 15:
-            r = RuntimeErrorReporter(data)
-        elif stat_code == 20:
-            r = CompileErrorReporter(data)
-        elif stat_code == 11:
-            r = WrongAnswerReporter(data)
-        elif stat_code == 10:
-            r = AcceptedReporter(data)
+        reporter_map = {
+            10: AcceptedReporter,
+            11: WrongAnswerReporter,
+            15: RuntimeErrorReporter,
+            20: CompileErrorReporter
+        }
+        r = reporter_map[stat_code](data)
         self.reporter = r
 
     def report(self):
