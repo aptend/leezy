@@ -137,7 +137,16 @@ if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
     log_lv = getattr(logging, config.get('log.level').upper())
+    # try import first, filter its log
+    try:
+        import matplotlib.pyplot
+    except:
+        pass
     logging.basicConfig(level=log_lv)
+    root = logging.getLogger()
+    for name, logger in root.manager.loggerDict.items():
+        if name.startswith('matplotlib') and isinstance(logger, logging.Logger):
+            logger.setLevel(logging.WARNING)
     args.func(args)
 
 
