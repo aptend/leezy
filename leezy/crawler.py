@@ -199,7 +199,7 @@ class Login:
         session_token.store_token(token, expires)
 
     def us_login(self):
-        Warn('Leetcode.com enables Recaptcha verification now.\n'
+        Warn('Leetcode.com enables reCAPTCHA verification now.\n'
              'We can\'t sign you in easily anymore. \n'
              'You have to sign in leetcode.com first and then '
              'find LEETCODE_SESSION in the debug panel of browser\n'
