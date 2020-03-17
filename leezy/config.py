@@ -36,7 +36,7 @@ CHECK_FUNCTIONS = {
     "table.max_content_length": int
 }
 
-CONFIG_FILE = './.leezy'
+CONFIG_FILE = '~/.leezy'
 
 
 class Config:

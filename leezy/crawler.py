@@ -354,6 +354,9 @@ class ProblemProvider:
         return new
 
 
+def _find_func_names(text):
+    return re.findall(r'def\s+(\S+)\s*\(', text)
+
 class Problem:
     def __init__(self, id_, context=None, provider=None):
         self.query_id = id_
@@ -406,13 +409,12 @@ class Problem:
         # change function name before submit
         if len(extractor) > 1 and not self.frontend_id:
             self._lazy_init()
-            origin_func_name = re.findall(
-                r'def\s+(\S+)\(', self.code_snippet)[0]
+            origin_func_name = _find_func_names(self.code_snippet)[0]
             code = code.replace(func+'(', origin_func_name+'(')
 
-        # prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
-        # if not YesNoDialog(prelude).collect():
-        #     return
+        prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
+        if not YesNoDialog(prelude).collect():
+            return
 
         payload = {
             "question_id": str(self.query_id),
@@ -547,6 +549,9 @@ class Liner:
 
     def has_next(self):
         return self.curidx < self.N
+    
+    def is_empty(self):
+        return self.peek().strip() == ''
 
     def peek(self):
         return self.lines[self.curidx]
@@ -621,10 +626,18 @@ class SolutionExtractor:
     def get_function(self, liner):
         indent = liner.indent()
         claim = liner.peek()[indent:]
-        func_name = re.findall(r'def\s+(\S+)\(', claim)[0]
+        func_name = _find_func_names(claim)[0]
         codes = [claim]
         liner.eat()
-        while liner.has_next() and liner.indent() > indent:
-            codes.append(liner.peek()[indent:])
+        while liner.has_next():
+            if liner.is_empty():
+                codes.append('\n')
+            elif liner.indent() > indent:
+                codes.append(liner.peek()[indent:])
+            else:
+                break # non-empty and smaller indent
             liner.eat()
-        return (func_name, '\n'.join(codes))
+        # remove trailing new lines
+        while codes and codes[-1] == '\n':
+            codes.pop()
+        return (func_name, '\n'.join(codes) + '\n')
