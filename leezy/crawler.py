@@ -203,7 +203,11 @@ class Login:
              'We can\'t sign you in easily anymore. \n'
              'You have to sign in leetcode.com first and then '
              'find LEETCODE_SESSION in the debug panel of browser\n'
-             'Chrome: F12 and follow the guide of the graph:\n' + GUIDE)
+             'If you use Chrome: \n'
+             '  1. sign in leetcode.com\n'
+             '  2. press F12\n'
+             '  3. follow the guide of the graph to copy the token out\n'
+             + GUIDE)
         token, expires = self._login_by_bare_hand()
         session_token.store_token(token, expires)
 
