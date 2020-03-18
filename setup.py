@@ -1,11 +1,17 @@
+import re
 from setuptools import setup
+
+with open('leezy/__main__.py', encoding='utf8') as f:
+    VERSION = re.findall(
+        r'VERSION\s*=\s*[\'\"]([\.\d]+)[\'\"]\s*$',
+        f.read(), re.MULTILINE)[0]
 
 with open("README.md", 'r', encoding='utf8') as f:
     long_description = f.read()
 
 setup(
     name='leezy',
-    version='0.3.4',
+    version=VERSION,
     description='leezy: leetcode helper for the lazy',
     license="MIT",
     long_description=long_description,

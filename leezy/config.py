@@ -22,7 +22,7 @@ DEFAULT = {
         "zone": "cn"
     },
     "log": {
-        "level": "INFO"
+        "level": "WARNING"
     },
     "timeout": {
         "submit": 10,
@@ -171,12 +171,13 @@ class Config:
 
 
 class SessionToken:
-    def __init__(self, config):
-        self.token = None
-        self.expires = None
-        self.csrf = None
-        self.config = config
-        zone = config.get('core.zone')
+    def init(self):
+        """use global `config` to initial itself like Urls.init
+
+        call this method when config is all set.
+        """
+        # let __main__ to initial session_token
+        zone = self.config.get('core.zone')
         if zone == 'cn':
             self.token_path = 'session.cn.token'
             self.expires_path = 'session.cn.expires'
@@ -193,6 +194,13 @@ class SessionToken:
             self.csrf = config.get(self.csrf_path)
         except ConfigError:
             pass
+
+    def __init__(self, config):
+        self.token = None
+        self.expires = None
+        self.csrf = None
+        # test might use this field
+        self.config = config
 
     def is_existed(self):
         return self.expires is not None and self.token is not None
@@ -225,7 +233,12 @@ class Urls:
     PORTAL = None
 
     @classmethod
-    def init(cls, zone):
+    def init(cls, config):
+        """use global `config` to get zone info to initial itself
+
+        call this method when config is all set.
+        """
+        zone = config.get('core.zone')
         if zone == 'cn':
             cls.PORTAL = 'https://leetcode-cn.com'
         elif zone == 'us':
@@ -276,4 +289,3 @@ class Urls:
 
 config = Config()
 session_token = SessionToken(config)
-Urls.init(config.get('core.zone'))

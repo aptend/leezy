@@ -3,7 +3,7 @@ import argparse
 import subprocess
 
 from leezy.crawler import Problem
-from leezy.config import config
+from leezy.config import config, session_token, Urls
 
 from leezy.errors import show_error_and_exit, LeezyError
 
@@ -14,10 +14,60 @@ Info = LOG.info
 Debug = LOG.debug
 Warn = LOG.warning
 
+VERSION = '0.3.4'
+
 
 def show_uncaught_exc(e):
     print(f'Uncaught Exception: {e!r}')
     Debug(traceback.format_exc(limit=10))
+
+
+def expand_ids(ids_arg):
+    if len(ids_arg) == 1 and ids_arg[0].count('-') == 1:
+        s, e = ids_arg[0].split('-')[:2]
+        return list(range(int(s), int(e)+1))
+    else:
+        return ids_arg
+
+
+parser = argparse.ArgumentParser(
+    prog='leezy',
+    description='Manage your Python solutions better',
+    usage='leezy [options] COMMAND')
+
+parser.add_argument('-V', '--version',
+                    action='version',
+                    version=VERSION)
+parser.add_argument('--zone',
+                    choices=['cn', 'us'],
+                    metavar='ZONE',
+                    help="'cn' or 'us', default is 'cn'")
+parser.add_argument('--dir',
+                    help="assign a temporary workdir for this session")
+parser.add_argument('-v',
+                    action='count',
+                    help="verbose, use multiple -vv... to show more log")
+
+
+subs = parser.add_subparsers(
+    title="COMMANDS",
+    description="use 'leezy <COMMAND> -h' to see more",
+    metavar='-⭐-')
+
+
+def show(args):
+    for pid in expand_ids(args.ids):
+        try:
+            print(Problem(pid).digest())
+        except LeezyError as e:
+            show_error_and_exit(e)
+        except Exception as e:
+            show_uncaught_exc(e)
+
+
+show_parser = subs.add_parser('show', help='show basic info of problems')
+show_parser.add_argument('ids', nargs='+', help="question ids")
+show_parser.set_defaults(func=show)
 
 
 def pull(args):
@@ -30,22 +80,24 @@ def pull(args):
             show_uncaught_exc(e)
 
 
-def expand_ids(ids_arg):
-    if len(ids_arg) == 1 and ids_arg[0].count('-') == 1:
-        s, e = ids_arg[0].split('-')[:2]
-        return list(range(int(s), int(e)+1))
-    else:
-        return ids_arg
+pull_parser = subs.add_parser(
+    'pull',
+    usage=argparse.SUPPRESS,
+    help='pull problems to local files',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""examples:
+    leezy pull 1                 pull the first problem
+    leezy pull 1 2 3             pull (1st, 2nd, 3rd) problems together
+    leezy pull 1-3               pull (1st, 2nd, 3rd) problems together
+    leezy pull 700 -c tree       pull no.700 and set tree context
+    leezy pull 2 -c linkedlist   pull no.2 and set linkedlist context""")
 
-
-def show(args):
-    for pid in expand_ids(args.ids):
-        try:
-            print(Problem(pid).digest())
-        except LeezyError as e:
-            show_error_and_exit(e)
-        except Exception as e:
-            show_uncaught_exc(e)
+pull_parser.add_argument('ids', nargs='+', help="problem ids")
+pull_parser.add_argument('-c', '--context',
+                         metavar='',
+                         choices=['tree', 'linkedlist'],
+                         help="set a context for this problem \n[tree or linkedlist]")
+pull_parser.set_defaults(func=pull)
 
 
 def run(args):
@@ -71,6 +123,17 @@ def run(args):
             raise
 
 
+run_parser = subs.add_parser(
+    'run',
+    usage=argparse.SUPPRESS,
+    help='run your solutions, see outputs or test them',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""examples:
+    leezy run 1       run the first problem""")
+run_parser.add_argument('id', help="problem id")
+run_parser.set_defaults(func=run)
+
+
 def submit(args):
     parts = args.solution.split('@')
     sol_id, id_ = int(parts[0]), int(parts[1])
@@ -82,9 +145,35 @@ def submit(args):
         show_uncaught_exc(e)
 
 
+submit_parser = subs.add_parser(
+    'submit',
+    usage=argparse.SUPPRESS,
+    help='submit your solution to leetcode',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""examples:
+    leezy submit 1@1      submit the 1st solution of problem 1
+    leezy submit 2@1      submit the 2nd solution of problem 1
+    leezy submit 1        same with 1@1, just a shortcut""")
+
+submit_parser.add_argument('solution', help="postion of your solution")
+submit_parser.set_defaults(func=submit)
+
+
 def plot(args):
     from leezy.plot import SNSPlotter, DataFeeder
     SNSPlotter(DataFeeder()).plot()
+
+
+plot_parser = subs.add_parser(
+    'plot',
+    usage=argparse.SUPPRESS,
+    help='show a heatmap of your all accepted solutions',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""examples:
+    leezy plot
+    """)
+
+plot_parser.set_defaults(func=plot)
 
 
 def handle_config(args):
@@ -93,54 +182,55 @@ def handle_config(args):
                         for k, v in config.get_all_file_data()))
     elif args.add:
         config.put(args.add[0], args.add[1])
-    elif args.unset:
-        config.delete(args.unset[0])
+    elif args.delete:
+        config.delete(args.delete[0])
 
 
-parser = argparse.ArgumentParser(prog='leezy', usage='`leezy --examples`')
+config_parser = subs.add_parser(
+    'config',
+    usage=argparse.SUPPRESS,
+    help='manage global configs',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""examples:
+    leezy config -l                               show all config entries
+    leezy config -a core.workdir  D:\leetcode    set workdir
+    leezy config -a core.zone cn                  run leezy on cn every time
+    leezy config -a log.level debug               run leezy at debug log level
+    leezy config -d core                          remove all core settings
+    """)
 
-parser.add_argument('--zone', help='赛区', default='cn')
-parser.add_argument('--examples', action='store_true', help='样例')
-
-subs = parser.add_subparsers(
-    title="COMMANDS:",
-    description="use 'leezy command -h' to see more",
-    metavar='')
-
-run_parser = subs.add_parser('run', help='运行题解')
-run_parser.add_argument('id', type=int, help="题目编号")
-run_parser.set_defaults(func=run)
-
-plot_parser = subs.add_parser('plot', help='画个AC热点图')
-plot_parser.set_defaults(func=plot)
-
-submit_parser = subs.add_parser('submit', help='提交题解')
-submit_parser.add_argument('solution', help="题解编号，1@1，第一题的题解1")
-submit_parser.set_defaults(func=submit)
-
-pull_parser = subs.add_parser('pull', help='拉取题目到本地文件', usage='leezy pull --examples')
-pull_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
-pull_parser.add_argument('--context', metavar='CXT',
-                         choices=['tree', 'linkedlist'],
-                         help="题目上下文，影响题目参数转换")
-pull_parser.set_defaults(func=pull)
-
-show_parser = subs.add_parser('show', help='打印编号的题目')
-show_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
-show_parser.set_defaults(func=show)
-
-config_parser = subs.add_parser('config', help='全局配置')
 group = config_parser.add_mutually_exclusive_group()
-group.add_argument('--add', nargs=2, metavar='', help='NAME VALUE')
-group.add_argument('--unset', nargs=1, metavar='', help='NAME')
-group.add_argument('--list', action='store_true')
+group.add_argument('-l', '--list',
+                   action='store_true',
+                   help='show all config entries')
+group.add_argument('-d', '--del',
+                   nargs=1,
+                   metavar='',
+                   dest='delete',
+                   help='delete settings')
+group.add_argument('-a', '--add',
+                   nargs=2,
+                   metavar='',
+                   help='add a <Key Value> setting pair')
 config_parser.set_defaults(func=handle_config)
 
 args = parser.parse_args()
 if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
-    print(args)
+    if args.zone is not None:
+        config.patch('core.zone', args.zone)
+    if args.v is not None:
+        if args.v == 1:
+            config.patch('log.level', 'info')
+        else:
+            config.patch('log.level', 'debug')
+    if args.dir is not None:
+        config.patch('core.workdir', args.dir)
+
+    session_token.init()
+    Urls.init(config)
+
     log_lv = getattr(logging, config.get('log.level').upper())
     # try import first, filter its log
     try:
