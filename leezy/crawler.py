@@ -118,8 +118,8 @@ class ProblemQueryPayload(Payload):
             }
         }"""
 
-    def set_slug_title(self, slug_title):
-        self.variables['titleSlug'] = slug_title
+    def set_title_slug(self, title_slug):
+        self.variables['titleSlug'] = title_slug
         return self
 
 
@@ -243,7 +243,8 @@ class Login:
 
 
 class Entry:
-    def __init__(self, title, title_slug, difficulty):
+    def __init__(self, question_id, title, title_slug, difficulty):
+        self.question_id = question_id
         self.title = title
         self.title_slug = title_slug
         self.difficulty = difficulty
@@ -290,6 +291,7 @@ class ProblemEntryRepo:
         maps = {}
         for p in problems:
             maps[p['stat']['frontend_question_id']] = {
+                "question_id": p['stat']['question_id'],
                 "title": p['stat']['question__title'],
                 "title_slug": p['stat']['question__title_slug'],
                 "difficulty": levels[p['difficulty']['level']]
@@ -298,7 +300,7 @@ class ProblemEntryRepo:
 
     def write_down_problems(self, problems):
         with open(self.problems_file, 'w') as f:
-            json.dump(problems, f)
+            json.dump(problems, f, ensure_ascii=False)
 
 
 class ProblemProvider:
@@ -308,37 +310,41 @@ class ProblemProvider:
         self.net = self.entry_repo.net
 
     def info_by_id(self, id_):
+        """return a `Entry`, provide some basic infomation like title and id
+        """
         return self.entry_repo.entry_by_id(id_)
 
     def detail_by_id(self, id_):
+        """return a `dict`, provide code_snippets / description etc, including
+        the basic information returned by `info_by_id`
+        """
         entry = self.entry_repo.entry_by_id(id_)
         raw = self._raw_problem_detail(entry.title_slug)
         detail = self._flush_raw_problem_detail(entry.title_slug, raw)
+        # append basic infomation about this problem
+        detail.update(entry.__dict__)
         return detail
 
-    def _raw_problem_detail(self, slug_title):
-        payload = ProblemQueryPayload().set_slug_title(slug_title).as_dict()
-        purpose = f"fetch problem {slug_title!r} detail"
+    def _raw_problem_detail(self, title_slug):
+        payload = ProblemQueryPayload().set_title_slug(title_slug).as_dict()
+        purpose = f"fetch problem {title_slug!r} detail"
         post = self.entry_repo.net.post
         r = post(Urls.graphql(), purpose=purpose, json=payload)
         return r.json()
 
-    def _flush_raw_problem_detail(self, slug_title, raw_json):
+    def _flush_raw_problem_detail(self, title_slug, raw_json):
         if 'errors' in raw_json:
             raise FetchError(
-                description=f"found errors when fetching {slug_title!r}",
+                description=f"found errors when fetching {title_slug!r}",
                 cause=raw_json['errors'][0]['message'])
         raw = raw_json['data']['question']
         if raw is None:
             raise FetchError("No content in response.")
         if raw['isPaidOnly']:
-            raise Locked(f'the problem {slug_title!r} is locked')
+            raise Locked(f'the problem {title_slug!r} is locked')
         new = {}
-        new['frontend_id'] = raw['questionFrontendId']
-        new['title'] = raw['title']
-        new['slug_title'] = raw['titleSlug']
         new['content'] = raw['content']
-        new['smilar_problems'] = json.loads(raw['similarQuestions'])
+        new['similar_problems'] = json.loads(raw['similarQuestions'])
         new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
                                sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
         # testcase of problem 191 is not valid json data
@@ -357,25 +363,28 @@ class ProblemProvider:
 def _find_func_names(text):
     return re.findall(r'def\s+(\S+)\s*\(', text)
 
+
 class Problem:
     def __init__(self, id_, context=None, provider=None):
+        # id_ is frontend_id of a problem
         self.query_id = id_
         self.context = context
-        self.id_ = str(id_).rjust(ID_WIDTH, '0')
         self.provider = provider or ProblemProvider()
 
         _info = self.provider.info_by_id(id_)
-        self.title = NAME_BLACKLIST_RE.sub('', _info.title).strip()
-        self.slug_title = NAME_BLACKLIST_RE.sub('', _info.title_slug).strip()
-        self.difficulty = _info.difficulty
+        self.basic_info = _info
+        # eliminate all invalid characters before making new files or folders
+        # loc means local
+        self.loc_id = str(id_).rjust(ID_WIDTH, '0')
+        self.loc_title = NAME_BLACKLIST_RE.sub('', _info.title).strip()
+        self.loc_slug = NAME_BLACKLIST_RE.sub('', _info.title_slug).strip()
         workdir = Path(config.get('core.workdir'))
-        self.folder_path = workdir / Path(f'{self.id_} - {self.title}')
-        self.html_path = self.folder_path / f'{self.id_}.html'
-        self.py_path = self.folder_path / f'{self.id_}_{self.slug_title}.py'
+        self.folder_path = workdir / Path(f'{self.loc_id} - {self.loc_title}')
+        self.html_path = self.folder_path / f'{self.loc_id}.html'
+        self.py_path = self.folder_path / f'{self.loc_id}_{self.loc_slug}.py'
 
-        self.frontend_id = None
         self.content = None
-        self.smilar_problem = None
+        self.similar_problem = None
         self.code_snippet = None
         self.sample_testcase = None
 
@@ -384,17 +393,18 @@ class Problem:
         self.__dict__.update(detail)
 
     def __str__(self):
-        return f'Problem<{self.id_}: {self.title}>'
+        return f'Problem<{self.loc_id}: {self.loc_title}>'
 
     def _generate_solution_tmpl(self):
         render = Render(self)
         return render.render()
 
     def digest(self):
-        return f'Problem<{self.id_}: {self.title}> @{self.difficulty}'
+        return (f'Problem<{self.loc_id}: {self.loc_title}> '
+                f'@{self.basic_info.difficulty}')
 
     def pull(self):
-        if not self.frontend_id:
+        if self.content is None:
             self._lazy_init()
         self.folder_path.mkdir(parents=True, exist_ok=True)
         self.html_path.write_text(self.content, encoding='utf8')
@@ -406,9 +416,11 @@ class Problem:
             raise LeezyError(f'File not found: {self.py_path}')
         extractor = SolutionExtractor(self.py_path.read_text())
         func, code = extractor.submission(n)
-        # change function name before submit
-        if len(extractor) > 1 and not self.frontend_id:
-            self._lazy_init()
+        # if there are multiple solutions,
+        # we need to change function name before submitting
+        if len(extractor) > 1:
+            if self.content is None:
+                self._lazy_init()
             origin_func_name = _find_func_names(self.code_snippet)[0]
             code = code.replace(func+'(', origin_func_name+'(')
 
@@ -417,17 +429,17 @@ class Problem:
             return
 
         payload = {
-            "question_id": str(self.query_id),
+            "question_id": str(self.basic_info.question_id),
             "lang": "python3",
             "typed_code": code,
             "test_mode": False,
             "test_judger": "",
-            "questionSlug": self.slug_title
+            "questionSlug": self.basic_info.title_slug
         }
 
         net = self.provider.net
-        headers = {"referer": Urls.problem_home(self.slug_title)}
-        r = net.post(Urls.problem_submit(self.slug_title),
+        headers = {"referer": Urls.problem_home(self.basic_info.title_slug)}
+        r = net.post(Urls.problem_submit(self.basic_info.title_slug),
                      purpose="submit a solution",
                      json=payload,
                      headers=headers)
@@ -446,7 +458,7 @@ class Problem:
         if 'status_code' in rjson:
             # append more infomation
             rjson.update({
-                'discuss_url': Urls.problem_discussion(self.slug_title),
+                'discuss_url': Urls.problem_discussion(self.basic_info.title_slug),
                 'submission_detail': Urls.submission_detail(submission_id),
             })
             SubmissionReporter(rjson).report()
@@ -549,7 +561,7 @@ class Liner:
 
     def has_next(self):
         return self.curidx < self.N
-    
+
     def is_empty(self):
         return self.peek().strip() == ''
 
@@ -635,7 +647,7 @@ class SolutionExtractor:
             elif liner.indent() > indent:
                 codes.append(liner.peek()[indent:])
             else:
-                break # non-empty and smaller indent
+                break  # non-empty and smaller indent
             liner.eat()
         # remove trailing new lines
         while codes and codes[-1] == '\n':
