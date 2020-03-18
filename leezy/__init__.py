@@ -1,5 +1,5 @@
 """
-leezy: For the leetcode lazy
+leezy: Manage your leetcode Python solutions better
 """
 
-from leezy.core import solution, Solution, timeit, timeit_with_precision
+from leezy.core import solution, Solution
