@@ -97,10 +97,13 @@ def handle_config(args):
         config.delete(args.unset[0])
 
 
-parser = argparse.ArgumentParser(
-    prog='leezy', usage='leezy [-h] COMMAND [...]')
+parser = argparse.ArgumentParser(prog='leezy', usage='`leezy --examples`')
+
+parser.add_argument('--zone', help='赛区', default='cn')
+parser.add_argument('--examples', action='store_true', help='样例')
+
 subs = parser.add_subparsers(
-    title="commands",
+    title="COMMANDS:",
     description="use 'leezy command -h' to see more",
     metavar='')
 
@@ -115,9 +118,10 @@ submit_parser = subs.add_parser('submit', help='提交题解')
 submit_parser.add_argument('solution', help="题解编号，1@1，第一题的题解1")
 submit_parser.set_defaults(func=submit)
 
-pull_parser = subs.add_parser('pull', help='拉取题目到本地文件')
+pull_parser = subs.add_parser('pull', help='拉取题目到本地文件', usage='leezy pull --examples')
 pull_parser.add_argument('ids', nargs='+', help="题目编号，多个使用空格分隔")
-pull_parser.add_argument('--context', choices=['tree', 'linked_list'],
+pull_parser.add_argument('--context', metavar='CXT',
+                         choices=['tree', 'linkedlist'],
                          help="题目上下文，影响题目参数转换")
 pull_parser.set_defaults(func=pull)
 
@@ -136,11 +140,12 @@ args = parser.parse_args()
 if len(args._get_kwargs()) + len(args._get_args()) == 0:
     parser.print_help()
 else:
+    print(args)
     log_lv = getattr(logging, config.get('log.level').upper())
     # try import first, filter its log
     try:
         import matplotlib.pyplot
-    except:
+    except Exception:
         pass
     logging.basicConfig(level=log_lv)
     root = logging.getLogger()
