@@ -106,7 +106,7 @@ class Render:
             context.update({
                 'tree_context': self.problem.context == 'tree',
                 'linkedlist_context': self.problem.context == 'linked_list',
-                'id_': problem.id_,
+                'id_': problem.loc_id,
                 'testcase': ", ".join(repr(x) for x in problem.sample_testcase)
             })
             t = Templite(NormalTempl)
