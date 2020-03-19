@@ -1,3 +1,4 @@
+import sys
 import logging
 import argparse
 import subprocess
@@ -22,12 +23,38 @@ def show_uncaught_exc(e):
     Debug(traceback.format_exc(limit=10))
 
 
+def _exit(msg):
+    print('leezy: ' + msg)
+    sys.exit(1)
+
+
 def expand_ids(ids_arg):
     if len(ids_arg) == 1 and ids_arg[0].count('-') == 1:
+        # handle input like '40-43'
         s, e = ids_arg[0].split('-')[:2]
-        return list(range(int(s), int(e)+1))
+        try:
+            s, e = int(s), int(e)
+        except ValueError:
+            _exit('a-b is valid only when a and b are both numbers')
+        return [str(x) for x in range(s, e+1)]
     else:
         return ids_arg
+
+
+def parse_solution_pos(s):
+    # handle input like 2@42
+    parts = s.strip().split('@')
+    N = len(parts)
+    if N == 0 or N > 2:
+        _exit(f'unrecognized soution input: {s!r}')
+    if N == 1:
+        return (1, s)
+    else:
+        try:
+            sol_num = int(parts[0])
+        except ValueError:
+            _exit(f'{parts[0]!r} is not a number')
+        return (sol_num, parts[1])
 
 
 parser = argparse.ArgumentParser(
@@ -65,7 +92,15 @@ def show(args):
             show_uncaught_exc(e)
 
 
-show_parser = subs.add_parser('show', help='show basic info of problems')
+show_parser = subs.add_parser(
+    'show',
+    usage=argparse.SUPPRESS,
+    help='show basic info of problems',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=r"""examples:
+    leezy show 1          show the first problem
+    leezy show 1 2 3      show (1st, 2nd, 3rd) problems together
+    leezy show 1-3        show (1st, 2nd, 3rd) problems together""")
 show_parser.add_argument('ids', nargs='+', help="question ids")
 show_parser.set_defaults(func=show)
 
@@ -85,7 +120,7 @@ pull_parser = subs.add_parser(
     usage=argparse.SUPPRESS,
     help='pull problems to local files',
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description="""examples:
+    description=r"""examples:
     leezy pull 1                 pull the first problem
     leezy pull 1 2 3             pull (1st, 2nd, 3rd) problems together
     leezy pull 1-3               pull (1st, 2nd, 3rd) problems together
@@ -96,7 +131,7 @@ pull_parser.add_argument('ids', nargs='+', help="problem ids")
 pull_parser.add_argument('-c', '--context',
                          metavar='',
                          choices=['tree', 'linkedlist'],
-                         help="set a context for this problem \n[tree or linkedlist]")
+                         help="set a context for this problem [tree or linkedlist]")
 pull_parser.set_defaults(func=pull)
 
 
@@ -128,17 +163,16 @@ run_parser = subs.add_parser(
     usage=argparse.SUPPRESS,
     help='run your solutions, see outputs or test them',
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description="""examples:
+    description=r"""examples:
     leezy run 1       run the first problem""")
 run_parser.add_argument('id', help="problem id")
 run_parser.set_defaults(func=run)
 
 
 def submit(args):
-    parts = args.solution.split('@')
-    sol_id, id_ = int(parts[0]), int(parts[1])
+    sol_id, front_id = parse_solution_pos(args.solution)
     try:
-        Problem(id_).submit(sol_id)
+        Problem(front_id).submit(sol_id)
     except LeezyError as e:
         show_error_and_exit(e)
     except Exception as e:
@@ -150,7 +184,7 @@ submit_parser = subs.add_parser(
     usage=argparse.SUPPRESS,
     help='submit your solution to leetcode',
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description="""examples:
+    description=r"""examples:
     leezy submit 1@1      submit the 1st solution of problem 1
     leezy submit 2@1      submit the 2nd solution of problem 1
     leezy submit 1        same with 1@1, just a shortcut""")
@@ -191,13 +225,12 @@ config_parser = subs.add_parser(
     usage=argparse.SUPPRESS,
     help='manage global configs',
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    description="""examples:
+    description=r"""examples:
     leezy config -l                               show all config entries
-    leezy config -a core.workdir  D:\leetcode    set workdir
+    leezy config -a core.workdir  D:\leetcode     set workdir
     leezy config -a core.zone cn                  run leezy on cn every time
     leezy config -a log.level debug               run leezy at debug log level
-    leezy config -d core                          remove all core settings
-    """)
+    leezy config -d core                          remove all core settings""")
 
 group = config_parser.add_mutually_exclusive_group()
 group.add_argument('-l', '--list',
