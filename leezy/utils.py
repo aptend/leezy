@@ -68,10 +68,6 @@ class SessionTokenDialog:
         return (token, int(expires))
 
 
-if __name__ == "__main__":
-    print(SessionTokenDialog().collect())
-
-
 class Table:
     """ Table format tool
 

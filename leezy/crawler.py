@@ -122,6 +122,17 @@ class ProblemQueryPayload(Payload):
         self.variables['titleSlug'] = title_slug
         return self
 
+# just use this to fetch csrftoken
+class UserStatusPayload(Payload):
+    def __init__(self):
+        self.operation = 'userStatus'
+        self.variables = {}
+        self.query = """\
+        query userStatus {
+            userStatus {
+                __typename
+            }
+        }"""
 
 class Net:
     def __init__(self):
@@ -134,6 +145,11 @@ class Net:
         })
         # init csrf once using last local storage
         # `session` will hanlde the upating of csrf caused by multiple requests
+        if not session_token.get_csrf():
+            # update csrftoken
+            r = self.sess.post(Urls.graphql(),
+                               json=UserStatusPayload().as_dict())
+            session_token.try_update_csrf(r)
         self.sess.cookies.update(session_token.get_csrf())
 
     def get(self, url, purpose='', **kwargs):
@@ -162,8 +178,8 @@ class Net:
             csrf = self.sess.cookies.get('csrftoken', default=None, domain=d)
             if csrf:
                 break
-
-        headers = {'x-csrftoken': csrf} if csrf else {}
+        assert csrf is not None
+        headers = {'x-csrftoken': csrf}
         if 'headers' in kwargs:
             kwargs['headers'].update(headers)
         else:
@@ -314,7 +330,6 @@ class ProblemEntryRepo:
 
 class ProblemProvider:
     def __init__(self):
-        self.grapql_url = "https://leetcode.com/graphql"
         self.entry_repo = ProblemEntryRepo()
         self.net = self.entry_repo.net
 
