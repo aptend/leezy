@@ -20,7 +20,7 @@ def raise_for_status(response, description):
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
         Debug(response.text)
-        Debug(response.request.headers)
+        Debug("\nrequst headers:\n" + response.request.headers)
         raise FetchError(description, e)
 
 

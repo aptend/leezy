@@ -157,7 +157,12 @@ class Net:
         purpose = purpose or f'try to POST {url!r}'
 
         # add 'x-csrftoken' into POST headers
-        csrf = self.sess.cookies.get('csrftoken', None)
+        csrf = None
+        for d in ('leetcode.com', 'leetcode-cn.com', ''):
+            csrf = self.sess.cookies.get('csrftoken', default=None, domain=d)
+            if csrf:
+                break
+
         headers = {'x-csrftoken': csrf} if csrf else {}
         if 'headers' in kwargs:
             kwargs['headers'].update(headers)
