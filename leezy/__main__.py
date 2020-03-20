@@ -265,16 +265,23 @@ else:
     Urls.init(config)
 
     log_lv = getattr(logging, config.get('log.level').upper())
-    # try import first, filter its log
-    try:
-        import matplotlib.pyplot
-    except Exception:
-        pass
+
+    def reject_modules(modules, lv=logging.INFO):
+        def _reject_filter(record):
+            mod_name = record.name
+            mod_lv = record.levelno
+            for mod in modules:
+                if mod_name.startswith(mod) and mod_lv <= lv:
+                    return False
+            return True
+        return _reject_filter
+
     logging.basicConfig(level=log_lv)
     root = logging.getLogger()
-    for name, logger in root.manager.loggerDict.items():
-        if name.startswith('matplotlib') and isinstance(logger, logging.Logger):
-            logger.setLevel(logging.WARNING)
+    rej_mat = reject_modules(['matplotlib'])
+    for hld in root.handlers:
+        hld.addFilter(rej_mat)
+
     args.func(args)
 
 
