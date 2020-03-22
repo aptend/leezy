@@ -1,14 +1,20 @@
 import sys
 import json
+import logging
 from types import SimpleNamespace
+
+
+LOG = logging.getLogger(__name__)
+Debug = LOG.debug
 
 try:
     import numpy as np
     import seaborn as sns
     import matplotlib.pyplot as plt
-except ImportError:
-    print("plot a heatmap needs package 'seaborn', try to install first:")
+except ImportError as e:
+    print("plot a heatmap needs package 'seaborn', try to install it first:")
     print("    $ pip install seaborn")
+    Debug(e)
     sys.exit(1)
 
 
