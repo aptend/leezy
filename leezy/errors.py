@@ -3,6 +3,7 @@ import sys
 import logging
 import requests
 
+from leezy.config import config
 
 LOG = logging.getLogger(__name__)
 Info = LOG.info
@@ -16,6 +17,13 @@ def show_error_and_exit(err):
 
 
 def raise_for_status(response, description):
+    if response.status_code == 403:
+        zone = config.get('core.zone')
+        assert zone == 'cn' or zone == 'us'
+        config.delete("session."+zone)
+        raise FetchError(
+            "Account authentication failed, you might try again and sign in", e)
+
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
