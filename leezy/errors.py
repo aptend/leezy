@@ -3,8 +3,6 @@ import sys
 import logging
 import requests
 
-from leezy.config import config
-
 LOG = logging.getLogger(__name__)
 Info = LOG.info
 Debug = LOG.debug
@@ -18,6 +16,8 @@ def show_error_and_exit(err):
 
 def raise_for_status(response, description):
     if response.status_code == 403:
+        # avoid loop forever during import-time
+        from leezy.config import config
         zone = config.get('core.zone')
         assert zone == 'cn' or zone == 'us'
         config.delete("session."+zone)
