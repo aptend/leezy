@@ -122,6 +122,7 @@ class ProblemQueryPayload(Payload):
         self.variables['titleSlug'] = title_slug
         return self
 
+
 # just use this to fetch csrftoken
 class UserStatusPayload(Payload):
     def __init__(self):
@@ -133,6 +134,7 @@ class UserStatusPayload(Payload):
                 __typename
             }
         }"""
+
 
 class Net:
     def __init__(self):
@@ -276,7 +278,7 @@ class Entry:
 
 
 class ProblemEntryRepo:
-    def __init__(self, cn=False):
+    def __init__(self):
         self.net = Net()
         path = str(Path(tempfile.gettempdir()) / "leezy_problems.json")
         self.problems_file = path

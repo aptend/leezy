@@ -2,6 +2,7 @@ import re
 from enum import Enum
 from .templite import Templite
 
+
 class TemplateType(Enum):
     Normal = 0  # single function solution
     Design = 1  # design a data structure
@@ -67,6 +68,7 @@ if __name__ == '__main__':
     main()
 """
 
+
 class Render:
     def __init__(self, problem):
         self.problem = problem
@@ -105,7 +107,7 @@ class Render:
         if tmpl_type == TemplateType.Normal:
             context.update({
                 'tree_context': self.problem.context == 'tree',
-                'linkedlist_context': self.problem.context == 'linked_list',
+                'linkedlist_context': self.problem.context == 'linkedlist',
                 'id_': problem.loc_id,
                 'testcase': ", ".join(repr(x) for x in problem.sample_testcase)
             })
@@ -114,7 +116,7 @@ class Render:
         elif tmpl_type == TemplateType.Design:
             testcase = problem.sample_testcase
             init_args = ''
-            if testcase[0][0] == clss[0]: # first operation is initializing
+            if testcase[0][0] == clss[0]:  # first operation is initializing
                 init_args = ', '.join(repr(x) for x in testcase[1][0])
                 testcase[0] = testcase[0][1:]
                 testcase[1] = testcase[1][1:]
