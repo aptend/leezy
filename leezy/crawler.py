@@ -539,7 +539,6 @@ class TLEReporter(Reporter):
         data = self.data
         print('   passed cases: ',
               f'{data.total_correct}/{data.total_testcases}')
-        print('  last testcase: ', shorten(data.input_formatted, 50))
 
 
 class AcceptedReporter(Reporter):
