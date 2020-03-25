@@ -215,17 +215,22 @@ class SessionToken:
         return {'csrftoken': self.csrf} if self.csrf else {}
 
     def store_token(self, token, expires):
+        self.token = token
+        self.expires = expires
         self.config.put(self.token_path, token)
         self.config.put(self.expires_path, expires)
 
     def try_update_csrf(self, r):
         if 'csrftoken' in r.cookies:
             self.store_csrf(r.cookies['csrftoken'])
+            return True
+        return False
 
     def store_csrf(self, csrf):
-        # actually, csrftoken's life time is very long
+        # actually, csrftoken's lifetime is very long
         # it may be more efficient to lower the frequency of updating
         if csrf != self.csrf:
+            self.csrf = csrf
             self.config.put(self.csrf_path, csrf)
 
 

@@ -149,9 +149,12 @@ class Net:
         # `session` will hanlde the upating of csrf caused by multiple requests
         if not session_token.get_csrf():
             # update csrftoken
+            Debug('Try initialize csrf')
             r = self.sess.post(Urls.graphql(),
                                json=UserStatusPayload().as_dict())
-            session_token.try_update_csrf(r)
+            found = session_token.try_update_csrf(r)
+            if not found:
+                Warn('Failed to intialize csrf')
         self.sess.cookies.update(session_token.get_csrf())
 
     def get(self, url, purpose='', **kwargs):
@@ -176,7 +179,7 @@ class Net:
 
         # add 'x-csrftoken' into POST headers
         csrf = None
-        for d in ('leetcode.com', 'leetcode-cn.com', ''):
+        for d in ('leetcode.com', '.leetcode-cn.com', ''):
             csrf = self.sess.cookies.get('csrftoken', default=None, domain=d)
             if csrf:
                 break
@@ -201,6 +204,10 @@ class Net:
 
     def ensure_login(self):
         if not session_token.is_existed() or session_token.is_expired():
+            if not session_token.is_existed():
+                Debug('Session token is not found.')
+            else:
+                Debug('Session has expired.')
             # login() will update session_token
             Login(self, config.get('core.zone')).login()
         self.sess.cookies.update(session_token.get_token())
@@ -247,7 +254,7 @@ class Login:
         return (username, password)
 
     def _cn_login_by_secret(self, username, password):
-        Debug(f"try to sign in {Urls.portal()} as {username!r}")
+        Debug(f"Try to sign in {Urls.portal()} as {username!r}")
         # leetcode-cn.com
         payload = (LoginPayload().set_secret(username, password).as_dict())
         r = self.net._post(Urls.graphql(),
@@ -450,7 +457,7 @@ class Problem:
             origin_func_name = _find_func_names(self.code_snippet)[0]
             code = code.replace(func+'(', origin_func_name+'(')
 
-        prelude = f"Is it OK to submit function {func!r}:\n{code}\n"
+        prelude = f"Is it OK to submit solution {func!r}?:\n{code}\n"
         if not YesNoDialog(prelude).collect():
             return
 

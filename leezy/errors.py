@@ -22,7 +22,7 @@ def raise_for_status(response, description):
         assert zone == 'cn' or zone == 'us'
         config.delete("session."+zone)
         raise FetchError(
-            "Account authentication failed, you might try again and sign in", e)
+            "Account authentication failed, you might try again and sign in")
 
     try:
         response.raise_for_status()
