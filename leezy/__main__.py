@@ -248,7 +248,7 @@ group.add_argument('-a', '--add',
 config_parser.set_defaults(func=handle_config)
 
 args = parser.parse_args()
-if len(args._get_kwargs()) + len(args._get_args()) == 0:
+if not hasattr(args, 'func'):
     parser.print_help()
 else:
     if args.zone is not None:
