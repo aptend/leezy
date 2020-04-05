@@ -447,7 +447,7 @@ class Problem:
     def submit(self, n):
         if not self.py_path.is_file():
             raise LeezyError(f'File not found: {self.py_path}')
-        extractor = SolutionExtractor(self.py_path.read_text())
+        extractor = SolutionExtractor(self.py_path.read_text(encoding='utf8'))
         func, code = extractor.submission(n)
         # if there are multiple solutions,
         # we need to change function name before submitting
