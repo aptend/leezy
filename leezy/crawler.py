@@ -178,11 +178,12 @@ class Net:
         purpose = purpose or f'try to POST {url!r}'
 
         # add 'x-csrftoken' into POST headers
-        csrf = None
-        for d in ('leetcode.com', '.leetcode-cn.com', ''):
-            csrf = self.sess.cookies.get('csrftoken', default=None, domain=d)
-            if csrf:
-                break
+        # csrf = None
+        # for d in ('leetcode.com', '.leetcode-cn.com', ''):
+        #     csrf = self.sess.cookies.get('csrftoken', default=None, domain=d)
+        #     if csrf:
+        #         break
+        csrf = self.sess.cookies.get('csrftoken', default=None)
         assert csrf is not None
         headers = {'x-csrftoken': csrf}
         if 'headers' in kwargs:
@@ -263,7 +264,6 @@ class Login:
 
         if not r.json()['data']['authSignInWithPassword']['ok']:
             raise LoginError("Wrong username or password?")
-
         token = expires = None
         for c in r.cookies:
             if c.name == 'LEETCODE_SESSION':

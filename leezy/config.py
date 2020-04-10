@@ -5,6 +5,7 @@ from collections import abc
 from functools import partial
 from datetime import datetime
 from types import SimpleNamespace
+from requests.cookies import RequestsCookieJar
 
 from leezy.errors import ConfigError
 
@@ -182,15 +183,20 @@ class SessionToken:
             self.token_path = 'session.cn.token'
             self.expires_path = 'session.cn.expires'
             self.csrf_path = 'session.cn.csrf'
+            self.domain = '.leetcode-cn.com'
         elif zone == 'us':
             self.token_path = 'session.us.token'
             self.expires_path = 'session.us.expires'
             self.csrf_path = 'session.us.csrf'
+            self.domain = 'leetcode.com'
         else:
             raise ConfigError(f'Unrecognized zone {zone!r}')
         try:
             self.token = config.get(self.token_path)
             self.expires = config.get(self.expires_path)
+        except ConfigError:
+            pass
+        try:
             self.csrf = config.get(self.csrf_path)
         except ConfigError:
             pass
@@ -199,6 +205,7 @@ class SessionToken:
         self.token = None
         self.expires = None
         self.csrf = None
+        self.domain = None
         # test might use this field
         self.config = config
 
@@ -209,10 +216,16 @@ class SessionToken:
         return datetime.timestamp(datetime.now()) > self.expires
 
     def get_token(self):
-        return {'LEETCODE_SESSION': self.token} if self.token else {}
+        jar = RequestsCookieJar()
+        if self.token:
+            jar.set('LEETCODE_SESSION', self.token, domain=self.domain)
+        return jar
 
     def get_csrf(self):
-        return {'csrftoken': self.csrf} if self.csrf else {}
+        jar = RequestsCookieJar()
+        if self.csrf:
+            jar.set('csrftoken', self.csrf, domain=self.domain)
+        return jar
 
     def store_token(self, token, expires):
         self.token = token

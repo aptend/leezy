@@ -15,20 +15,19 @@ def show_error_and_exit(err):
 
 
 def raise_for_status(response, description):
-    if response.status_code == 403:
-        # avoid loop forever during import-time
-        from leezy.config import config
-        zone = config.get('core.zone')
-        assert zone == 'cn' or zone == 'us'
-        config.delete("session."+zone)
-        raise FetchError(
-            "Account authentication failed, you might try again and sign in")
-
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
         Debug(response.text)
         Debug("\nrequst headers:\n" + str(response.request.headers))
+        if e.response.status_code == 403:
+            # avoid loop forever during import-time
+            from leezy.config import config
+            zone = config.get('core.zone')
+            assert zone == 'cn' or zone == 'us'
+            config.delete("session."+zone)
+            raise FetchError(
+                "Account authentication failed, you might try again and sign in")
         raise FetchError(description, e)
 
 
