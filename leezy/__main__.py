@@ -15,7 +15,7 @@ Info = LOG.info
 Debug = LOG.debug
 Warn = LOG.warning
 
-VERSION = '0.5.2'
+VERSION = '0.5.3'
 
 
 def show_uncaught_exc(e):
