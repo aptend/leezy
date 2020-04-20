@@ -108,7 +108,7 @@ class Render:
             context.update({
                 'tree_context': self.problem.context == 'tree',
                 'linkedlist_context': self.problem.context == 'linkedlist',
-                'id_': problem.loc_id,
+                'id_': problem.loc_id if problem.loc_id.isdigit() else 'Solution',
                 'testcase': ", ".join(repr(x) for x in problem.sample_testcase)
             })
             t = Templite(NormalTempl)

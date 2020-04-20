@@ -97,6 +97,7 @@ class ProblemQueryPayload(Payload):
                 title
                 titleSlug
                 content
+                translatedContent
                 isPaidOnly
                 difficulty
                 likes
@@ -316,7 +317,7 @@ class ProblemEntryRepo:
 
     def _raw_web_all_problems(self):
         purpose = "fetch the list of problem entry"
-        r = self.net.get(Urls.api_problems_algo(), purpose=purpose)
+        r = self.net.get(Urls.api_problems_all(), purpose=purpose)
         return r.json()
 
     def _flush_raw_all_problems(self, raw_json):
@@ -333,7 +334,7 @@ class ProblemEntryRepo:
         return maps
 
     def write_down_problems(self, problems):
-        with open(self.problems_file, 'w') as f:
+        with open(self.problems_file, 'w', encoding='utf8') as f:
             json.dump(problems, f, ensure_ascii=False)
 
 
@@ -376,7 +377,10 @@ class ProblemProvider:
         if raw['isPaidOnly']:
             raise Locked(f'the problem {title_slug!r} is locked')
         new = {}
-        new['content'] = raw['content']
+        if 'Please switch to Chinese' in raw['content']:
+            new['content'] = raw['translatedContent']
+        else:
+            new['content'] = raw['content']
         new['similar_problems'] = json.loads(raw['similarQuestions'])
         new['code_snippet'] = [sp['code'] for sp in raw['codeSnippets'] if
                                sp['langSlug'] == 'python'][0].replace('\r\n', '\n')
