@@ -398,7 +398,7 @@ class ProblemProvider:
 
 
 def _find_func_names(text):
-    return re.findall(r'def\s+(\S+)\s*\(', text)
+    return re.findall(r'^[^#]*def\s+(\S+)\s*\(', text, re.M)  # def in non-comment
 
 
 class Problem:
@@ -652,7 +652,6 @@ class SolutionExtractor:
             parts.append("\nclass Solution:")
             parts.extend(indent(block, '    ') + '\n' for block in blocks)
             submits.append((solution, '\n'.join(parts)))
-
         self.submits = submits
 
     def submission(self, n):
